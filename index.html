@@ -3,118 +3,227 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="assets/logo.png">
+<meta name="theme-color" content="#ff8a1f">
 <title>IBD Training</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#ff8a1f; --cream:#f5f1e8; --cream2:#e6e1d5; --line:#d3cdbd;
+  --ink:#14181f; --muted:#6b6a63; --blue:#2347f5; --navy:#12284a;
+  --green:#0a7a4a; --red:#d83a3a;
+  --head:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  --body:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--orange);color:var(--ink);font-family:var(--body);font-size:16px}
+.hidden{display:none!important}
+h2{font-family:var(--head);font-weight:700;font-size:1.9rem;margin:0 0 10px;line-height:1.05}
+h3{font-family:var(--head);font-weight:700;font-size:1.3rem;margin:0}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input,select,textarea{width:100%;font:inherit;font-size:1.05rem;color:var(--ink);background:var(--cream2);border:2px solid transparent;border-radius:14px;padding:14px;margin:0;appearance:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+input::placeholder,textarea::placeholder{color:#8d8b82}
+select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' fill='none' stroke='%2314181f' stroke-width='2'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+label{display:block;font-size:.95rem;color:var(--muted);margin:12px 0 6px}
+.btn{display:block;width:100%;border-radius:16px;padding:16px;font-weight:700;font-size:1.1rem;text-align:center}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.outline{border:2px solid var(--line);background:transparent;font-family:var(--head);font-size:1.4rem;letter-spacing:.02em}
+.btn.light{background:#fff;color:#222;box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.btn:active{transform:scale(.985);filter:brightness(.95)}
+.link{color:var(--blue);font-weight:600;padding:8px}
+.wrap{max-width:520px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px 120px}
+
+/* header */
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pill{display:flex;align-items:center;gap:10px;background:var(--navy);border-radius:16px;padding:6px 18px 6px 6px}
+.pill img{width:44px;height:44px;border-radius:12px;object-fit:cover;object-position:50% 12%;background:#0b1b33}
+.pill b{font-family:var(--head);font-weight:800;font-size:1.7rem;color:#fff;letter-spacing:.01em}
+.pill i{color:var(--orange);font-style:normal}
+.avatar{width:48px;height:48px;border-radius:50%;background:var(--cream);border:1px solid var(--line);font-size:1.4rem;display:grid;place-items:center}
+.hello{font-size:1.1rem;margin:6px 0 14px;font-weight:500}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.tile{background:var(--cream);border-radius:20px;padding:14px 12px;border:1px solid var(--line);user-select:none;-webkit-user-select:none;touch-action:manipulation;min-height:132px;overflow:hidden}
+.tile .big{font-family:var(--head);font-weight:700;font-size:clamp(1.55rem,7vw,2.3rem);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
+.tile .big.sm{font-size:clamp(1.4rem,6vw,2rem);margin-top:6px}
+.tile .lbl{color:var(--muted);margin-top:6px;font-size:.98rem}
+.tile .hint{color:var(--muted);font-size:.82rem;margin-top:4px;line-height:1.25}
+.tile.run{outline:3px solid var(--blue)}
+.tile.work{background:#fff3e3;outline:3px solid #ff5a00}
+.tile.rest{background:#e5edff;outline:3px solid var(--blue)}
+.tile.prep{background:#fff9cc;outline:3px solid #e0b400}
+.tile.done{background:#dff5e8;outline:3px solid var(--green)}
+
+/* cards */
+.card{background:var(--cream);border-radius:24px;padding:18px;margin-bottom:16px;border:1px solid var(--line)}
+.eyebrow{font-weight:700;letter-spacing:.14em;font-size:.82rem;color:var(--muted);text-transform:uppercase}
+.sub{color:var(--blue);font-weight:600;font-size:1.15rem;margin:2px 0 14px}
+.moves{border-top:1px solid var(--line)}
+.moves div{padding:16px 0;border-bottom:1px solid var(--line);font-size:1.15rem;font-weight:500}
+.moves:empty{display:none}
+.note{color:var(--muted);margin:14px 0}
+.info{background:var(--cream2);border-radius:14px;padding:14px;color:#3a3935;margin-bottom:14px;line-height:1.35}
+.g3{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3 label,.g2 label{margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 6px}
+.chip{background:var(--cream2);border:1px solid var(--line);border-radius:999px;padding:12px 20px;font-family:var(--head);font-weight:700;font-size:1.25rem}
+.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chips.sm .chip{padding:8px 14px;font-size:1.05rem}
+.btn+.btn,.card .btn{margin-top:14px}
+.card h2+.btn{margin-top:0}
+
+/* lists */
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line);text-align:left;width:100%}
+.row:last-child{border-bottom:0}
+.row .nm{font-family:var(--head);font-weight:700;font-size:1.5rem;line-height:1.05}
+.row .tp{color:var(--muted);font-size:.95rem;margin-top:3px}
+.row .val{text-align:right;white-space:nowrap}
+.row .val small{display:block;color:var(--green);font-weight:600;font-size:.95rem}
+.row .val b{font-family:var(--head);font-size:1.8rem;color:var(--green);font-weight:700}
+.row>div:first-child{min-width:0;flex:1 1 auto}
+.row .val.chg{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.row .val.chg b{font-size:1.45rem}
+.row .val.chg .arrow{font-size:1.1rem}
+.row .val.chg small{font-size:.85rem}
+.row .nm{overflow-wrap:break-word}
+.row .val.chg>span{display:block}
+.row .val.chg .a small{color:var(--red)} .row .val.chg .a b{color:var(--red)}
+.row .val.chg .arrow{color:var(--muted);font-size:1.3rem}
+.row .val.chg .dn b,.row .val.chg .dn small{color:var(--red)}
+.det{background:var(--cream2);border-radius:14px;padding:6px 14px;margin:-4px 0 12px}
+.det div{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:.98rem}
+.det div:last-child{border:0}
+.x{color:var(--red);font-weight:700;padding:4px 8px;font-size:1.1rem}
+.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.rec{font-size:1.05rem;margin-top:8px}
+.rec b{color:var(--green)}
+canvas{width:100%;height:230px;display:block}
+.small{font-size:.9rem;color:var(--muted)}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--cream);display:flex;gap:6px;padding:8px 10px max(8px,env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(0,0,0,.18);z-index:10;max-width:520px;margin:0 auto;border-radius:22px 22px 0 0}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:18px;font-family:var(--head);font-weight:700;font-size:1.1rem;color:#33322e}
+.nav button span{font-size:1.6rem;line-height:1}
+.nav button.on{background:var(--cream2);color:var(--blue)}
+
+/* auth */
+.auth{min-height:100vh;display:grid;place-items:center;padding:20px}
+.auth-in{width:100%;max-width:400px}
+.auth .pill{width:max-content;margin:0 auto 14px}
+.auth h1{font-family:var(--head);font-weight:800;font-size:2.6rem;text-align:center;margin:0;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.15)}
+.auth .tag{text-align:center;color:#3b1d00;margin:2px 0 16px;font-weight:600}
+.tabs{display:flex;background:var(--cream2);border-radius:14px;padding:4px;margin-bottom:6px}
+.tabs button{flex:1;padding:11px;border-radius:11px;font-weight:700;color:var(--muted)}
+.tabs button.on{background:var(--blue);color:#fff}
+.warn{background:#fff3c4;border:1px solid #e6c84d;border-radius:14px;padding:12px;font-size:.95rem;margin-bottom:12px;line-height:1.35}
+.err{color:var(--red);font-weight:600;min-height:1.3em;margin:10px 0 0;text-align:center}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px}
+.sep{display:flex;align-items:center;gap:10px;color:var(--muted);margin:14px 0 0;font-size:.9rem}
+.sep:before,.sep:after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* dialogs */
+dialog{border:0;border-radius:24px 24px 0 0;background:var(--cream);color:var(--ink);width:100%;max-width:520px;max-height:85vh;margin:auto auto 0;padding:18px 18px 26px}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-90px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;z-index:99;transition:.3s;max-width:92vw;text-align:center}
+#toast.show{transform:translate(-50%,0)}
+#toast.bad{background:var(--red)}
+</style>
 </head>
 <body>
 <div id="toast"></div>
 
-<!-- LOGIN -->
+<!-- ============ LOGIN ============ -->
 <section id="auth" class="auth hidden">
-  <div class="auth-card">
-    <div class="brand big"><img src="assets/logo.png" alt="" onerror="this.remove()"><span class="badge">IBD</span></div>
-    <h1>TRAINING</h1>
-    <p class="muted">Allenati. Misura. Migliora.</p>
-    <div class="tabs2">
-      <button class="authtab active" data-m="in">Accedi</button>
-      <button class="authtab" data-m="up">Registrati</button>
+  <div class="auth-in">
+    <div class="pill"><img src="logo.png" alt=""><b>IBD <i>Training</i></b></div>
+    <h1>ALLENATI. MISURA. MIGLIORA.</h1>
+    <p class="tag">Timer, WOD, massimali e storico dei tuoi allenamenti</p>
+    <div class="card">
+      <div id="demoWarn" class="warn hidden">⚠️ Firebase non è ancora collegato: il login non può funzionare. Inserisci le chiavi in <b>firebase-config.js</b>, oppure prova l'app in modalità demo.</div>
+      <div class="tabs">
+        <button class="on" data-m="in" type="button">Accedi</button>
+        <button data-m="up" type="button">Registrati</button>
+      </div>
+      <form id="authForm">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="nome@email.it" autocomplete="email" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Almeno 6 caratteri" autocomplete="current-password" minlength="6" required>
+        <button class="btn primary" id="authSubmit" type="submit">Accedi</button>
+      </form>
+      <div class="sep">oppure</div>
+      <button id="btnGoogle" class="btn light gbtn" type="button" style="margin-top:14px">
+        <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7.9-6.2A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+        Continua con Google
+      </button>
+      <p id="authErr" class="err"></p>
+      <div style="text-align:center">
+        <button id="btnReset" class="link" type="button">Password dimenticata?</button>
+        <button id="btnDemo" class="link hidden" type="button">Prova la modalità demo</button>
+      </div>
     </div>
-    <form id="authForm">
-      <input id="email" type="email" placeholder="Email" autocomplete="email" required>
-      <input id="password" type="password" placeholder="Password (min. 6 caratteri)" autocomplete="current-password" minlength="6" required>
-      <button class="btn primary big" id="authSubmit" type="submit">ACCEDI</button>
-    </form>
-    <button id="btnGoogle" class="btn google">Continua con Google</button>
-    <button id="btnReset" class="link">Password dimenticata?</button>
-    <button id="btnDemo" class="btn hidden">Prova in modalità demo (dati solo su questo dispositivo)</button>
-    <p id="authErr" class="err"></p>
   </div>
 </section>
 
-<!-- APP -->
+<!-- ============ APP ============ -->
 <div id="app" class="hidden">
-  <header class="top">
-    <div class="brand"><img src="assets/logo.png" alt="" onerror="this.remove()"><span class="badge">IBD</span><span class="brandtxt">TRAINING</span></div>
-    <button id="btnLogout" class="link">Esci</button>
-  </header>
+  <div class="wrap">
+    <header class="head">
+      <div class="pill"><img src="logo.png" alt=""><b>IBD <i>Training</i></b></div>
+      <button id="btnProfile" class="avatar" aria-label="Profilo">👤</button>
+    </header>
+    <p class="hello" id="hello"></p>
 
-  <main>
-    <section id="v-home" class="view"></section>
+    <div class="tiles">
+      <div class="tile" id="tileTimer">
+        <div class="big" id="tTime">00:00</div>
+        <div class="lbl">timer</div>
+        <div class="hint" id="tHint">tocca per avviare</div>
+      </div>
+      <div class="tile" id="tileKcal">
+        <div class="big" id="kcal">0</div>
+        <div class="lbl">kcal consumate</div>
+        <div class="hint" id="kHint">salva un esercizio…</div>
+      </div>
+      <div class="tile" id="tileLap">
+        <div class="big" id="lapN">0</div>
+        <div class="lbl">giri</div>
+        <div class="big sm" id="lapT">00:00</div>
+        <div class="hint">tocca per partire · tieni premuto: azzera</div>
+      </div>
+    </div>
 
-    <section id="v-timer" class="view hidden">
-      <div class="chips" id="modeChips">
-        <button data-mode="amrap" class="active">AMRAP</button>
-        <button data-mode="emom">EMOM</button>
-        <button data-mode="tabata">TABATA</button>
-        <button data-mode="fortime">FOR TIME</button>
-        <button data-mode="rest">RIPOSO</button>
-      </div>
-      <div id="wodBanner" class="banner hidden"></div>
-      <div id="cfg" class="cfg"></div>
-      <div class="clock" id="clock">
-        <div id="phaseLabel" class="phase">PRONTO</div>
-        <div id="time" class="time">12:00</div>
-        <div id="roundInfo" class="muted"></div>
-        <div class="bar"><i id="barFill"></i></div>
-      </div>
-      <div class="row">
-        <button id="tStart" class="btn primary big">START</button>
-        <button id="tReset" class="btn">Reset</button>
-      </div>
-      <div class="row">
-        <button id="tRound" class="btn">+ Giro <b id="roundCount">0</b></button>
-        <button id="tFinish" class="btn">Termina e salva</button>
-      </div>
-      <button id="btnManual" class="link center">Registra un allenamento senza timer</button>
-    </section>
+    <main id="main"></main>
+  </div>
 
-    <section id="v-progress" class="view hidden"></section>
-    <section id="v-history" class="view hidden"></section>
-    <section id="v-profile" class="view hidden"></section>
-  </main>
-
-  <nav class="nav">
-    <button data-view="home" class="active"><span>🏠</span>Home</button>
-    <button data-view="timer"><span>⏱️</span>Timer</button>
-    <button data-view="progress"><span>📈</span>Progressi</button>
-    <button data-view="history"><span>📚</span>Storico</button>
-    <button data-view="profile"><span>👤</span>Profilo</button>
+  <nav class="nav" id="nav">
+    <button data-view="allena"><span>🏋️</span>Allena</button>
+    <button data-view="wod"><span>🔥</span>WOD</button>
+    <button data-view="progressi"><span>📈</span>Progressi</button>
+    <button data-view="storico"><span>📚</span>Storico</button>
   </nav>
 </div>
 
-<!-- DIALOG REGISTRAZIONE -->
-<dialog id="logDlg">
-  <form id="logForm" method="dialog">
-    <h2>Registra allenamento</h2>
-    <label>Titolo<input id="lTitle" list="wodNames" placeholder="Es. Fran, Back squat..." required></label>
-    <datalist id="wodNames"></datalist>
-    <div class="grid2">
-      <label>Tipo
-        <select id="lType">
-          <option>AMRAP</option><option>EMOM</option><option>Tabata</option>
-          <option>For Time</option><option>Forza</option><option>Cardio</option><option>Altro</option>
-        </select>
-      </label>
-      <label>Durata (min)<input id="lDur" type="number" min="0" step="0.5" value="0"></label>
-    </div>
-    <label>Data e ora<input id="lDate" type="datetime-local" required></label>
-    <label>Risultato (tempo, giri, reps...)<input id="lScore" placeholder="Es. 5:42 oppure 8+12"></label>
-    <div class="exhead"><b>Esercizi / carichi</b><button type="button" id="addEx" class="link">+ Aggiungi</button></div>
-    <datalist id="exNames"></datalist>
-    <div id="exRows"></div>
-    <label>Note<textarea id="lNotes" rows="2" placeholder="Sensazioni, scaling..."></textarea></label>
-    <div class="row">
-      <button type="button" id="lCancel" class="btn">Annulla</button>
-      <button type="submit" class="btn primary">Salva</button>
-    </div>
-  </form>
+<!-- Cambia WOD -->
+<dialog id="wodDlg"><h2>Scegli il WOD</h2><div id="wodList"></div><button class="btn outline" id="wodClose" type="button">Chiudi</button></dialog>
+<!-- Profilo -->
+<dialog id="profDlg">
+  <h2>Profilo</h2>
+  <p id="profMail" style="font-weight:600;margin-bottom:4px"></p>
+  <p id="profMode" class="small"></p>
+  <button class="btn outline" id="btnExport" type="button" style="font-size:1.2rem">Esporta i miei dati</button>
+  <button class="btn primary" id="btnLogout" type="button">Esci</button>
+  <button class="btn outline" id="profClose" type="button" style="font-size:1.2rem">Chiudi</button>
 </dialog>
 
-<script type="module" src="js/app.js"></script>
+<script type="module" src="app.js?v=2"></script>
 </body>
 </html>

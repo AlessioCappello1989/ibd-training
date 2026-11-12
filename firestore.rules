@@ -1,8 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Ogni utente legge e scrive solo i propri allenamenti
-    match /users/{uid}/workouts/{id} {
+    // Ogni utente legge e scrive solo i propri dati (allenamenti, massimali, risultati WOD, WOD personali)
+    match /users/{uid}/{collection}/{id} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
   }
