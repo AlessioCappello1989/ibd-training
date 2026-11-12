@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Ogni utente legge e scrive solo i propri allenamenti
+    match /users/{uid}/workouts/{id} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

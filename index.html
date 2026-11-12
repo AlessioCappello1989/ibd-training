@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/logo.png">
+<title>IBD Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<section id="auth" class="auth hidden">
+  <div class="auth-card">
+    <div class="brand big"><img src="assets/logo.png" alt="" onerror="this.remove()"><span class="badge">IBD</span></div>
+    <h1>TRAINING</h1>
+    <p class="muted">Allenati. Misura. Migliora.</p>
+    <div class="tabs2">
+      <button class="authtab active" data-m="in">Accedi</button>
+      <button class="authtab" data-m="up">Registrati</button>
+    </div>
+    <form id="authForm">
+      <input id="email" type="email" placeholder="Email" autocomplete="email" required>
+      <input id="password" type="password" placeholder="Password (min. 6 caratteri)" autocomplete="current-password" minlength="6" required>
+      <button class="btn primary big" id="authSubmit" type="submit">ACCEDI</button>
+    </form>
+    <button id="btnGoogle" class="btn google">Continua con Google</button>
+    <button id="btnReset" class="link">Password dimenticata?</button>
+    <button id="btnDemo" class="btn hidden">Prova in modalità demo (dati solo su questo dispositivo)</button>
+    <p id="authErr" class="err"></p>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="brand"><img src="assets/logo.png" alt="" onerror="this.remove()"><span class="badge">IBD</span><span class="brandtxt">TRAINING</span></div>
+    <button id="btnLogout" class="link">Esci</button>
+  </header>
+
+  <main>
+    <section id="v-home" class="view"></section>
+
+    <section id="v-timer" class="view hidden">
+      <div class="chips" id="modeChips">
+        <button data-mode="amrap" class="active">AMRAP</button>
+        <button data-mode="emom">EMOM</button>
+        <button data-mode="tabata">TABATA</button>
+        <button data-mode="fortime">FOR TIME</button>
+        <button data-mode="rest">RIPOSO</button>
+      </div>
+      <div id="wodBanner" class="banner hidden"></div>
+      <div id="cfg" class="cfg"></div>
+      <div class="clock" id="clock">
+        <div id="phaseLabel" class="phase">PRONTO</div>
+        <div id="time" class="time">12:00</div>
+        <div id="roundInfo" class="muted"></div>
+        <div class="bar"><i id="barFill"></i></div>
+      </div>
+      <div class="row">
+        <button id="tStart" class="btn primary big">START</button>
+        <button id="tReset" class="btn">Reset</button>
+      </div>
+      <div class="row">
+        <button id="tRound" class="btn">+ Giro <b id="roundCount">0</b></button>
+        <button id="tFinish" class="btn">Termina e salva</button>
+      </div>
+      <button id="btnManual" class="link center">Registra un allenamento senza timer</button>
+    </section>
+
+    <section id="v-progress" class="view hidden"></section>
+    <section id="v-history" class="view hidden"></section>
+    <section id="v-profile" class="view hidden"></section>
+  </main>
+
+  <nav class="nav">
+    <button data-view="home" class="active"><span>🏠</span>Home</button>
+    <button data-view="timer"><span>⏱️</span>Timer</button>
+    <button data-view="progress"><span>📈</span>Progressi</button>
+    <button data-view="history"><span>📚</span>Storico</button>
+    <button data-view="profile"><span>👤</span>Profilo</button>
+  </nav>
+</div>
+
+<!-- DIALOG REGISTRAZIONE -->
+<dialog id="logDlg">
+  <form id="logForm" method="dialog">
+    <h2>Registra allenamento</h2>
+    <label>Titolo<input id="lTitle" list="wodNames" placeholder="Es. Fran, Back squat..." required></label>
+    <datalist id="wodNames"></datalist>
+    <div class="grid2">
+      <label>Tipo
+        <select id="lType">
+          <option>AMRAP</option><option>EMOM</option><option>Tabata</option>
+          <option>For Time</option><option>Forza</option><option>Cardio</option><option>Altro</option>
+        </select>
+      </label>
+      <label>Durata (min)<input id="lDur" type="number" min="0" step="0.5" value="0"></label>
+    </div>
+    <label>Data e ora<input id="lDate" type="datetime-local" required></label>
+    <label>Risultato (tempo, giri, reps...)<input id="lScore" placeholder="Es. 5:42 oppure 8+12"></label>
+    <div class="exhead"><b>Esercizi / carichi</b><button type="button" id="addEx" class="link">+ Aggiungi</button></div>
+    <datalist id="exNames"></datalist>
+    <div id="exRows"></div>
+    <label>Note<textarea id="lNotes" rows="2" placeholder="Sensazioni, scaling..."></textarea></label>
+    <div class="row">
+      <button type="button" id="lCancel" class="btn">Annulla</button>
+      <button type="submit" class="btn primary">Salva</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
