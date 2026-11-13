@@ -55,11 +55,10 @@ label{display:block;font-size:.95rem;color:var(--muted);margin:12px 0 6px}
 .tile .big.sm{font-size:clamp(1.4rem,6vw,2rem);margin-top:6px}
 .tile .lbl{color:var(--muted);margin-top:6px;font-size:.98rem}
 .tile .hint{color:var(--muted);font-size:.82rem;margin-top:4px;line-height:1.25}
-.tile.run{outline:3px solid var(--blue)}
-.tile.work{background:#fff3e3;outline:3px solid #ff5a00}
-.tile.rest{background:#e5edff;outline:3px solid var(--blue)}
-.tile.prep{background:#fff9cc;outline:3px solid #e0b400}
-.tile.done{background:#dff5e8;outline:3px solid var(--green)}
+.tile.on{background:#dff5e8;outline:3px solid var(--green)}
+.tile.on .big{color:var(--green)}
+.tile.off{background:#fde3e3;outline:3px solid var(--red)}
+.tile.off .big{color:var(--red)}
 
 /* cards */
 .card{background:var(--cream);border-radius:24px;padding:18px;margin-bottom:16px;border:1px solid var(--line)}
@@ -75,6 +74,20 @@ label{display:block;font-size:.95rem;color:var(--muted);margin:12px 0 6px}
 .g3 label,.g2 label{margin-top:12px}
 .chips{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 6px}
 .chip{background:var(--cream2);border:1px solid var(--line);border-radius:999px;padding:12px 20px;font-family:var(--head);font-weight:700;font-size:1.25rem}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:8px;margin-right:-18px;-webkit-overflow-scrolling:touch}
+.chips.scroll .chip{flex:none}
+.chip:disabled{opacity:.4}
+.pbh{border-top:4px solid var(--blue);border-bottom:4px solid var(--blue);color:var(--blue);font-family:var(--head);font-weight:700;font-size:1.7rem;letter-spacing:.06em;text-transform:uppercase;padding:10px 0;margin:24px 0 4px}
+.pi{display:flex;align-items:center;gap:10px;padding:16px 0;border-bottom:1px solid var(--line)}
+.pix{flex:1;min-width:0}
+.pi .nm{font-family:var(--body);font-weight:700;font-size:1.3rem;line-height:1.2;overflow-wrap:break-word}
+.pi .tp{color:var(--muted);font-size:1.05rem;margin-top:3px;line-height:1.35}
+.pia{display:flex;gap:2px;flex:none}
+.pia button{font-size:1.7rem;line-height:1;padding:8px 6px;min-width:44px}
+.pi.wod .pix{cursor:pointer}
+.pdiv{border-top:4px solid var(--ink);margin:28px 0 18px}
+.pbt{font-family:var(--body);font-weight:700;font-size:1.55rem;margin:0}
+.g3b{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .chips.sm .chip{padding:8px 14px;font-size:1.05rem}
 .btn+.btn,.card .btn{margin-top:14px}
@@ -234,7 +247,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
         <div class="big" id="lapN">0</div>
         <div class="lbl">giri</div>
         <div class="big sm" id="lapT">00:00</div>
-        <div class="hint">tocca per partire · tieni premuto: azzera</div>
+        <div class="hint" id="lapH">tocca per partire</div>
       </div>
     </div>
 
@@ -243,7 +256,6 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 
   <nav class="nav" id="nav">
     <button data-view="allena"><span>🏋️</span>Allena</button>
-    <button data-view="schede"><span>📋</span>Schede</button>
     <button data-view="wod"><span>🔥</span>WOD</button>
     <button data-view="progressi"><span>📈</span>Progressi</button>
     <button data-view="storico"><span>📚</span>Storico</button>
@@ -262,6 +274,6 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <button class="btn outline" id="profClose" type="button" style="font-size:1.2rem">Chiudi</button>
 </dialog>
 
-<script type="module" src="app.js?v=3"></script>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>

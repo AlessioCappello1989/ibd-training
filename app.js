@@ -169,7 +169,7 @@ const timer = new Timer(onTick, onDone);
 function setupTimer(w) { timerWod = w; lastElapsed = 0; timer.reset(phasesFor(w)); }
 function onTick(t) {
   const tile = $("#tileTimer");
-  tile.className = "tile" + (t.done ? " done" : t.phase && t.running ? " " + t.phase.kind : t.running ? " run" : "");
+  tile.className = "tile" + (t.running ? " on" : t.elapsed > 0 ? " off" : "");
   const p = t.phase;
   $("#tTime").textContent = !p ? "00:00" : p.up ? fmtUp(t.inPhase) : fmt(p.dur - t.inPhase);
   let hint = t.running ? "tocca per pausa" : t.elapsed > 0 && !t.done ? "tocca per riprendere · tieni premuto: azzera" : t.done ? "finito · tieni premuto: azzera" : "tocca per avviare";
@@ -187,13 +187,23 @@ pressable($("#tileTimer"), () => {
   else timer.start();
 }, () => { setupTimer(null); if (view === "wod") renderView(); });
 
-let laps = 0, lapStart = 0, lapInt = null;
-const paintLap = () => { $("#lapN").textContent = laps; $("#lapT").textContent = lapStart ? fmtUp((Date.now() - lapStart) / 1000) : "00:00"; };
+let laps = 0, lapState = "idle", lapStart = 0, lapAcc = 0, lapInt = null; // idle | run | stop
+const lapMs = () => lapAcc + (lapState === "run" ? Date.now() - lapStart : 0);
+const paintLap = () => {
+  $("#lapN").textContent = laps; $("#lapT").textContent = fmtUp(lapMs() / 1000);
+  $("#tileLap").className = "tile" + (lapState === "run" ? " on" : lapState === "stop" ? " off" : "");
+  $("#lapH").textContent = lapState === "run" ? "tocca: nuovo giro · tieni premuto: stop" : lapState === "stop" ? "tocca: riprendi · tieni premuto: azzera" : "tocca per partire";
+};
 pressable($("#tileLap"), () => {
-  if (!lapStart) { lapStart = Date.now(); lapInt = setInterval(paintLap, 250); }
-  else { laps++; lapStart = Date.now(); }
+  if (lapState === "run") { laps++; lapAcc = 0; lapStart = Date.now(); }
+  else { lapState = "run"; lapStart = Date.now(); clearInterval(lapInt); lapInt = setInterval(paintLap, 250); }
   paintLap();
-}, () => { laps = 0; lapStart = 0; clearInterval(lapInt); paintLap(); });
+}, () => {
+  clearInterval(lapInt);
+  if (lapState === "run") { lapAcc += Date.now() - lapStart; lapState = "stop"; }
+  else { laps = 0; lapAcc = 0; lapState = "idle"; }
+  paintLap();
+});
 
 function paintKcal() {
   const today = D.entries.filter((e) => isToday(e.date) && e.kind !== "max" && isDone(e));
@@ -215,13 +225,11 @@ V.allena = {
     const today = sod(Date.now()), ws = weekStartOf(selDay);
     const days = [...Array(7)].map((_, i) => addDays(ws, i));
     const list = dayList(selDay), nDone = list.filter(isDone).length;
-    const st = formStatus || (selDay < today ? "done" : "plan");
-    const recent = [...new Set([...D.entries].sort((a, b) => b.date - a.date).map((e) => e.exercise.trim()))];
-    const names = [...new Set([...recent, "Back squat", "Front squat", "Deadlift", "Clean", "Snatch", "Strict press", "Push press", "Bench press", "Thruster", "Pull-up"])];
     const month = new Date(selDay).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
     const long = new Date(selDay).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
     const dot = (d) => { const l = dayList(d); return !l.length ? "" : l.every(isDone) ? "all" : "plan"; };
     return `
+    ${planHtml()}
     <div class="card">
       <div class="weekbar"><button class="wk" data-wk="-1" aria-label="Settimana precedente">‹</button><div class="wlabel">${esc(month)}</div><button class="wk" data-wk="1" aria-label="Settimana successiva">›</button></div>
       <div class="days">${days.map((d, i) => `<button class="day ${d === selDay ? "sel" : ""} ${d === today ? "tod" : ""}" data-day="${d}"><small>${DAYN[i]}</small><b>${new Date(d).getDate()}</b><i class="dot ${dot(d)}"></i></button>`).join("")}</div>
@@ -230,36 +238,17 @@ V.allena = {
 
     <div class="card"><h2 style="text-transform:capitalize">${esc(long)}</h2>
       <p class="cnt">${list.length ? `${nDone} di ${list.length} fatti` : "Nessun esercizio in programma"}</p>
-      ${list.length ? list.map((e) => `<div class="item ${isDone(e) ? "done" : ""}"><button class="chk" data-chk="${e.id}" aria-label="${isDone(e) ? "Rimetti da fare" : "Segna come fatto"}">${isDone(e) ? "✓" : ""}</button><div class="itx"><div class="nm">${esc(e.exercise)}</div><div class="tp">${e.kg ? num(e.kg) + " kg × " : ""}${e.reps} rip × ${e.sets} serie${e.scheda ? " · " + esc(e.scheda) : ""}</div></div><button class="x" data-del="entries:${e.id}" aria-label="Elimina">✕</button></div>`).join("") : `<p class="muted" style="margin:0">Aggiungi gli esercizi di questo giorno qui sotto, oppure usa una delle tue schede.</p>`}
-      ${D.schede.length ? `<div class="useSc"><select id="sPick" aria-label="Scegli una scheda"><option value="">Aggiungi una scheda…</option>${D.schede.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select><button class="btn primary sm" id="sApply">Aggiungi</button></div>` : `<button class="btn outline sm" id="sGo">Crea una scheda</button>`}
-      ${list.length ? `<div class="useSc"><input id="sName" placeholder="Nome nuova scheda" aria-label="Nome nuova scheda" autocomplete="off"><button class="btn outline sm" id="sAs">Salva come scheda</button></div><button class="btn outline sm" id="dDup">Duplica al giorno dopo</button>` : ""}
+      ${list.length ? list.map((e) => `<div class="item ${isDone(e) ? "done" : ""}"><button class="chk" data-chk="${e.id}" aria-label="${isDone(e) ? "Rimetti da fare" : "Segna come fatto"}">${isDone(e) ? "✓" : ""}</button><div class="itx"><div class="nm">${esc(e.exercise)}</div><div class="tp">${e.kg ? num(e.kg) + " kg × " : ""}${e.reps} rip × ${e.sets} serie${e.scheda ? " · " + esc(e.scheda) : ""}</div></div><button class="x" data-del="entries:${e.id}" aria-label="Elimina">✕</button></div>`).join("") : `<p class="muted" style="margin:0">Usa «Aggiungi un giorno del piano» per programmare questo giorno.</p>`}
+      ${planDays().length ? `<div class="useSc"><select id="sPick" aria-label="Scegli un giorno del piano"><option value="">Aggiungi un giorno del piano…</option>${planDays().map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select><button class="btn primary sm" id="sApply">Aggiungi</button></div>` : ""}
+      ${list.length ? `<div class="useSc"><input id="sName" placeholder="Nome nuovo giorno del piano" aria-label="Nome nuovo giorno del piano" autocomplete="off"><button class="btn outline sm" id="sAs">Salva nel piano</button></div><button class="btn outline sm" id="dDup">Duplica al giorno dopo</button>` : ""}
     </div>
-
-    <div class="card"><h2>Aggiungi esercizio</h2>
-      <div class="seg"><button type="button" data-st="plan" class="${st === "plan" ? "on" : ""}">Da fare</button><button type="button" data-st="done" class="${st === "done" ? "on" : ""}">Fatto</button></div>
-      <label for="aEx">Esercizio</label>
-      <input id="aEx" list="exList" placeholder="Es. Back squat" autocomplete="off">
-      <datalist id="exList">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
-      ${recent.length ? `<div class="chips sm">${recent.slice(0, 6).map((x) => `<button class="chip" data-ex="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}
-      <div class="g3">
-        <div><label for="aKg">Peso (kg)</label><input id="aKg" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0"></div>
-        <div><label for="aReps">Ripetizioni</label><input id="aReps" type="number" inputmode="numeric" min="1" value="10"></div>
-        <div><label for="aSets">Serie</label><input id="aSets" type="number" inputmode="numeric" min="1" value="1"></div>
-      </div>
-      <button class="btn primary" id="aSave">Aggiungi al giorno</button>
-    </div>`;
+`;
   },
   bind() {
+    planBind();
     $$("[data-wk]").forEach((b) => (b.onclick = () => { selDay = addDays(selDay, +b.dataset.wk * 7); formStatus = null; renderView(); }));
     $$("[data-day]").forEach((b) => (b.onclick = () => { selDay = +b.dataset.day; formStatus = null; renderView(); }));
     if ($("#dToday")) $("#dToday").onclick = () => { selDay = sod(Date.now()); formStatus = null; renderView(); };
-    $$(".seg button").forEach((b) => (b.onclick = () => { formStatus = b.dataset.st; $$(".seg button").forEach((x) => x.classList.toggle("on", x === b)); }));
-    $$("[data-ex]").forEach((b) => (b.onclick = () => {
-      $("#aEx").value = b.dataset.ex;
-      const last = [...D.entries].filter(isDone).sort((a, c) => c.date - a.date).find((x) => x.exercise.trim() === b.dataset.ex);
-      if (last) { $("#aKg").value = last.kg || ""; $("#aReps").value = last.reps; $("#aSets").value = last.sets || 1; }
-      $("#aKg").focus();
-    }));
     $$("[data-chk]").forEach((b) => (b.onclick = async () => {
       const e = D.entries.find((x) => x.id === b.dataset.chk); if (!e) return;
       const next = isDone(e) ? "plan" : "done", patch = { status: next };
@@ -267,17 +256,18 @@ V.allena = {
       try { await S.update(user.uid, "entries", e.id, patch); await reload(); renderAll(); toast(next === "done" ? "Fatto ✔" : "Rimesso da fare"); }
       catch (err) { toast("Errore: " + err.message, true); }
     }));
-    if ($("#sGo")) $("#sGo").onclick = () => { draft = draft || { id: null, name: "", items: [] }; go("schede"); };
     if ($("#sApply")) $("#sApply").onclick = () => {
-      const sc = D.schede.find((x) => x.id === $("#sPick").value);
-      if (!sc) return toast("Scegli una scheda dall'elenco", true);
+      const sc = planDays().find((x) => x.id === $("#sPick").value);
+      if (!sc) return toast("Scegli un giorno del piano dall'elenco", true);
       applyScheda(sc, selDay);
     };
     if ($("#sAs")) $("#sAs").onclick = async () => {
       const name = $("#sName").value.trim();
-      if (!name) return toast("Scrivi il nome della scheda", true);
-      const items = dayList(selDay).map((e) => ({ exercise: e.exercise, kg: e.kg || 0, reps: e.reps, sets: e.sets }));
-      await save("schede", { name, items, createdAt: Date.now() }, `Scheda «${name}» salvata ✔`);
+      if (!name) return toast("Scrivi il nome del giorno", true);
+      const bl = emptyBlocks();
+      bl.allenamento.items = dayList(selDay).map((e) => ({ exercise: e.exercise, sets: e.sets || 1, reps: String(e.reps), kg: e.kg || 0 }));
+      try { const id = await S.add(user.uid, "schede", { name, blocks: bl, createdAt: Date.now() }); planSel = id; lsSet("ibd_plan_sel", id); await reload(); renderAll(); toast(`«${name}» salvato nel piano ✔`); }
+      catch (e) { toast("Errore: " + e.message, true); }
     };
     if ($("#dDup")) $("#dDup").onclick = async () => {
       const src = dayList(selDay), when = addDays(selDay, 1) + 12 * 36e5;
@@ -286,103 +276,141 @@ V.allena = {
         await reload(); renderAll(); toast(`Copiati ${src.length} esercizi sul giorno dopo ✔`);
       } catch (err) { toast("Errore: " + err.message, true); }
     };
-    $("#aSave").onclick = async () => {
-      const ex = $("#aEx").value.trim(), kg = parseFloat($("#aKg").value) || 0, reps = parseInt($("#aReps").value) || 0, sets = parseInt($("#aSets").value) || 1;
-      const status = $(".seg .on").dataset.st;
-      if (!ex) return toast("Scrivi il nome dell'esercizio", true);
-      if (reps < 1) return toast("Inserisci le ripetizioni", true);
-      const date = status === "done" && sod(selDay) === sod(Date.now()) ? Date.now() : selDay + 12 * 36e5;
-      const e = { kind: "training", status, exercise: ex, kg, reps, sets, date, createdAt: Date.now() }; e.kcal = kcalFor(e);
-      await save("entries", e, status === "plan" ? `In programma: ${ex} ✔` : `Salvato: ${ex} ${num(kg)} kg ✔`);
-    };
   },
 };
 
-/* ---- SCHEDE ---- */
-let draft = null; // scheda in modifica: { id, name, items: [{exercise,kg,reps,sets}], reps, sets }
+/* ---- PIANO DI ALLENAMENTO (giorni con blocchi Allenamento / Superset / WOD) ---- */
+const BT = ["allenamento", "superset", "wod"];
+const BTL = { allenamento: "Allenamento", superset: "Superset", wod: "WOD" };
+const emptyBlocks = () => ({ allenamento: { items: [], rest: "" }, superset: { items: [], rest: "" }, wod: { items: [] } });
+const normSc = (x) => {
+  const b = emptyBlocks();
+  if (x.blocks) BT.forEach((t) => { if (x.blocks[t]) b[t] = { ...b[t], ...x.blocks[t], items: [...(x.blocks[t].items || [])] }; });
+  else if (x.items) b.allenamento.items = x.items.map((i) => ({ exercise: i.exercise, sets: i.sets || 1, reps: String(i.reps ?? ""), kg: i.kg || 0 }));
+  return { ...x, blocks: b };
+};
+const planDays = () => D.schede.map(normSc).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+let planSel = lsGet("ibd_plan_sel") || null, planType = "allenamento", planEdit = null;
+const curDay = () => { const d = planDays(); return d.find((x) => x.id === planSel) || d[0] || null; };
+const setLineP = (it) => `${it.sets || 1}×${it.reps}${it.kg ? ` a ${num(it.kg)} kg` : ""}`;
+const wodMin = (w) => (["AMRAP", "EMOM", "Death By"].includes(w.type) ? w.minutes : w.type === "Tabata" ? Math.round(((w.rounds || 8) * ((w.work || 20) + (w.rest || 10))) / 60) : w.cap) || 0;
+const wodSnap = (w) => ({ wodId: w.id, name: w.name, sub: wodSub(w), moves: w.moves || [], mins: wodMin(w) });
 const longDay = (ms) => new Date(ms).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+const planErr = (e) => toast("Errore di salvataggio: " + (e.code === "permission-denied" ? "regole Firestore non pubblicate" : e.message), true);
+
+async function planSave(sc, patch, msg) {
+  try { await S.update(user.uid, "schede", sc.id, patch); await reload(); renderView(); if (msg) toast(msg); }
+  catch (e) { planErr(e); }
+}
 async function applyScheda(sc, dayMs) {
-  const when = sod(dayMs) + 12 * 36e5;
+  const when = sod(dayMs) + 12 * 36e5, items = [...sc.blocks.allenamento.items, ...sc.blocks.superset.items];
+  if (!items.length) return toast("Questo giorno del piano non ha esercizi", true);
   try {
-    for (let i = 0; i < sc.items.length; i++) {
-      const it = sc.items[i], e = { kind: "training", status: "plan", exercise: it.exercise, kg: it.kg || 0, reps: it.reps, sets: it.sets, scheda: sc.name, date: when, createdAt: Date.now() + i };
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i], e = { kind: "training", status: "plan", exercise: it.exercise, kg: it.kg || 0, reps: parseInt(String(it.reps)) || 1, sets: it.sets || 1, scheda: sc.name, date: when, createdAt: Date.now() + i };
       e.kcal = kcalFor(e); await S.add(user.uid, "entries", e);
     }
-    selDay = sod(dayMs); formStatus = null; await reload(); paintKcal();
-    if (view !== "allena") go("allena"); else renderView();
-    toast(`«${sc.name}» aggiunta a ${longDay(dayMs)} ✔`);
+    selDay = sod(dayMs); formStatus = null; await reload(); renderAll();
+    toast(`«${sc.name}» aggiunto a ${longDay(dayMs)} ✔`);
   } catch (err) { toast("Errore: " + err.message, true); }
 }
-V.schede = {
-  html() {
-    if (draft) {
-      const d = draft, names = [...new Set([...groups().map((x) => x.name), ...D.schede.flatMap((s) => s.items.map((i) => i.exercise)), "Back squat", "Front squat", "Deadlift", "Strict press", "Bench press", "Pull-up"])];
-      return `
-      <div class="card"><h2>${d.id ? "Modifica scheda" : "Nuova scheda"}</h2>
-        <label for="dName" style="margin-top:0">Nome della scheda</label>
-        <input id="dName" placeholder="Es. Scheda A · Gambe" value="${esc(d.name)}" autocomplete="off">
-        <h3 style="margin-top:20px">Esercizi della scheda (${d.items.length})</h3>
-        ${d.items.length ? d.items.map((it, i) => `<div class="item"><div class="itx"><div class="nm">${esc(it.exercise)}</div><div class="tp">${it.kg ? num(it.kg) + " kg × " : ""}${it.reps} rip × ${it.sets} serie</div></div><button class="x" data-rm="${i}" aria-label="Rimuovi">✕</button></div>`).join("") : `<p class="muted" style="margin:6px 0 0">Ancora nessun esercizio: aggiungine uno qui sotto.</p>`}
-      </div>
-      <div class="card"><h2>Aggiungi alla scheda</h2>
-        <label for="dEx" style="margin-top:0">Esercizio</label>
-        <input id="dEx" list="exList3" placeholder="Es. Back squat" autocomplete="off"><datalist id="exList3">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
-        <div class="g3">
-          <div><label for="dKg">Peso (kg)</label><input id="dKg" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0"></div>
-          <div><label for="dReps">Ripetizioni</label><input id="dReps" type="number" inputmode="numeric" min="1" value="${d.reps || 10}"></div>
-          <div><label for="dSets">Serie</label><input id="dSets" type="number" inputmode="numeric" min="1" value="${d.sets || 3}"></div>
-        </div>
-        <button class="btn outline sm" id="dAdd">+ Aggiungi esercizio</button>
-      </div>
-      <button class="btn primary" id="dSave">Salva scheda</button>
-      <button class="btn outline sm" id="dCancel" style="margin-bottom:16px">Annulla</button>`;
-    }
-    return `
-    <div class="card"><h2>Le tue schede</h2>
-      <p class="small">Crea una scheda, dalle un nome e inserisci i suoi esercizi. Poi aggiungila ai giorni che vuoi.</p>
-      <button class="btn primary" id="scNew" style="margin-top:0">+ Nuova scheda</button>
-    </div>
-    ${D.schede.length ? `<div class="card"><h2>Aggiungi a un giorno</h2>
-      <label for="scDay" style="margin-top:0">Giorno</label>
-      <input id="scDay" type="date" value="${iso(selDay)}">
-      <p class="small" style="margin:8px 0 0">${esc(longDay(selDay))}</p>
-      ${D.schede.map((s) => `<div class="sc"><div class="nm">${esc(s.name)}</div><div class="tp">${s.items.length} ${s.items.length === 1 ? "esercizio" : "esercizi"}${s.items.length ? " · " + esc(s.items.slice(0, 3).map((i) => i.exercise).join(", ")) + (s.items.length > 3 ? "…" : "") : ""}</div>
-        <div class="scb"><button class="btn primary sm" data-use="${s.id}">Aggiungi al giorno</button><button class="btn outline sm" data-edit="${s.id}">Modifica</button><button class="x" data-del="schede:${s.id}" aria-label="Elimina scheda">✕</button></div></div>`).join("")}
-    </div>` : ""}`;
-  },
-  bind() {
-    if (draft) {
-      const sync = () => { draft.name = $("#dName").value; };
-      $("#dName").oninput = sync;
-      $$("[data-rm]").forEach((b) => (b.onclick = () => { sync(); draft.items.splice(+b.dataset.rm, 1); renderView(); }));
-      $("#dAdd").onclick = () => {
-        sync();
-        const ex = $("#dEx").value.trim(), kg = parseFloat($("#dKg").value) || 0, reps = parseInt($("#dReps").value) || 0, sets = parseInt($("#dSets").value) || 1;
-        if (!ex) return toast("Scrivi il nome dell'esercizio", true);
-        if (reps < 1) return toast("Inserisci le ripetizioni", true);
-        draft.items.push({ exercise: ex, kg, reps, sets }); draft.reps = reps; draft.sets = sets;
-        renderView(); toast(`${ex} aggiunto alla scheda`);
-      };
-      $("#dCancel").onclick = () => { draft = null; renderView(); };
-      $("#dSave").onclick = async () => {
-        sync();
-        const name = draft.name.trim();
-        if (!name) return toast("Dai un nome alla scheda", true);
-        if (!draft.items.length) return toast("Aggiungi almeno un esercizio", true);
-        try {
-          if (draft.id) await S.update(user.uid, "schede", draft.id, { name, items: draft.items });
-          else await S.add(user.uid, "schede", { name, items: draft.items, createdAt: Date.now() });
-          draft = null; await reload(); renderAll(); toast(`Scheda «${name}» salvata ✔`);
-        } catch (e) { toast("Errore di salvataggio: " + (e.code === "permission-denied" ? "regole Firestore non pubblicate" : e.message), true); }
-      };
-      return;
-    }
-    $("#scNew").onclick = () => { draft = { id: null, name: "", items: [] }; renderView(); scrollTo(0, 0); };
-    if ($("#scDay")) $("#scDay").onchange = (e) => { const t = new Date(e.target.value + "T12:00:00").getTime(); if (!isNaN(t)) { selDay = sod(t); renderView(); } };
-    $$("[data-use]").forEach((b) => (b.onclick = () => { const sc = D.schede.find((x) => x.id === b.dataset.use); if (sc) applyScheda(sc, selDay); }));
-    $$("[data-edit]").forEach((b) => (b.onclick = () => { const sc = D.schede.find((x) => x.id === b.dataset.edit); if (sc) { draft = { id: sc.id, name: sc.name, items: sc.items.map((i) => ({ ...i })) }; renderView(); scrollTo(0, 0); } }));
-  },
-};
+
+function planHtml() {
+  const days = planDays(), sc = curDay();
+  const chips = `<div class="chips scroll">${days.map((d) => `<button class="chip ${sc && d.id === sc.id ? "on" : ""}" data-pday="${d.id}">${esc(d.name)}</button>`).join("")}<button class="chip" id="pAddDay" aria-label="Aggiungi un giorno">+</button></div>`;
+  const head = `<h2>Piano di allenamento</h2><p class="muted" style="font-size:1.05rem;line-height:1.5;margin:0 0 6px">Per registrare un esercizio tocca l'icona di salvataggio accanto alla matita: salva subito serie, ripetizioni e peso del piano con la data di oggi.</p>${chips}`;
+  if (!sc) return `<div class="card">${head}<p class="muted" style="margin:10px 0 0">Tocca + per creare il primo giorno del piano, poi dagli un nome e aggiungi gli esercizi.</p></div>`;
+
+  const blk = (t) => {
+    const b = sc.blocks[t]; if (!b.items.length) return "";
+    const m = t === "wod" ? b.items.reduce((a, i) => a + (i.mins || 0), 0) : 0;
+    const title = t === "wod" ? (m ? `WOD · ${m} minuti` : "WOD") : BTL[t];
+    const rows = b.items.map((it, i) => t === "wod"
+      ? `<div class="pi wod"><div class="pix" data-pwod="${i}" role="button" tabindex="0"><div class="nm">WOD · ${esc(it.name)}</div><div class="tp">${esc(String(it.sub || "").replace(/ min\b/, " minuti"))}</div>${(it.moves || []).length ? `<div class="tp">${esc(it.moves.join(" · "))}</div>` : ""}<div class="tp">tocca per registrare il risultato e vai nella pagina WOD per confermarlo.</div></div><div class="pia"><button data-pdel="${t}:${i}" aria-label="Elimina">✖️</button></div></div>`
+      : `<div class="pi"><div class="pix"><div class="nm">${esc(it.exercise)}</div><div class="tp">${esc(setLineP(it))}</div></div><div class="pia"><button data-psave="${t}:${i}" aria-label="Salva nello storico">💾</button><button data-pedit="${t}:${i}" aria-label="Modifica">✏️</button><button data-pdel="${t}:${i}" aria-label="Elimina">✖️</button></div></div>`).join("");
+    const rest = t === "wod" ? "" : `<label for="pRest_${t}">Recupero ${BTL[t].toLowerCase()}</label><input id="pRest_${t}" data-prest="${t}" placeholder="Es. Recupero 60 secondi" value="${esc(b.rest || "")}" autocomplete="off">`;
+    return `<div class="pbh">${esc(title)}</div>${rows}${rest}`;
+  };
+
+  if (planEdit && !(sc.blocks[planEdit.t] && sc.blocks[planEdit.t].items[planEdit.i])) planEdit = null;
+  const eit = planEdit ? sc.blocks[planEdit.t].items[planEdit.i] : null, typ = planEdit ? planEdit.t : planType;
+  const names = [...new Set([...groups().map((x) => x.name), ...planDays().flatMap((d) => [...d.blocks.allenamento.items, ...d.blocks.superset.items].map((i) => i.exercise)), "Panca piana bilanciere", "Back squat", "Deadlift", "Curl bilanciere", "Pull-up"])];
+  const wodSel = lsGet("ibd_today_wod");
+  const form = `<div class="pdiv"></div><h3 class="pbt">Blocco Allenamento Selezionabile</h3>
+    <div class="chips">${BT.map((t) => `<button class="chip ${t === typ ? "on" : ""}" data-ptype="${t}" ${planEdit && t !== typ ? "disabled" : ""}>${BTL[t]}</button>`).join("")}</div>
+    ${typ === "wod"
+      ? `<label for="pWod">Scegli il WOD</label><select id="pWod">${allWods().map((w) => `<option value="${w.id}" ${w.id === wodSel ? "selected" : ""}>${esc(w.name)} · ${esc(wodSub(w))}</option>`).join("")}</select><button class="btn primary" id="pAddWod">Aggiungi WOD</button>`
+      : `<label for="pEx">${eit ? "Modifica esercizio" : "Aggiungi esercizio"}</label>
+         <input id="pEx" list="exList4" placeholder="Es. Curl con bilanciere" value="${esc(eit ? eit.exercise : "")}" autocomplete="off"><datalist id="exList4">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+         <div class="g3b">
+           <div><label for="pSets">Serie</label><input id="pSets" type="number" inputmode="numeric" min="1" placeholder="3" value="${eit ? eit.sets || 1 : ""}"></div>
+           <div><label for="pReps">Ripetizioni</label><input id="pReps" placeholder="8-10" value="${esc(eit ? String(eit.reps) : "")}" autocomplete="off"></div>
+           <div><label for="pKg">Peso (kg)</label><input id="pKg" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" value="${eit && eit.kg ? eit.kg : ""}"></div>
+         </div>
+         <button class="btn primary" id="pAdd">${eit ? "Salva modifica" : "Aggiungi esercizio"}</button>${eit ? `<button class="btn outline sm" id="pCancelEdit">Annulla modifica</button>` : ""}`}`;
+
+  return `<div class="card">${head}
+    <label for="pName">Nome del giorno</label>
+    <input id="pName" value="${esc(sc.name)}" autocomplete="off">
+    ${BT.map(blk).join("")}
+    ${form}
+    <button class="link" id="pDelDay" style="color:var(--red);margin-top:18px">Elimina questo giorno</button>
+  </div>`;
+}
+
+function planBind() {
+  const sc = curDay();
+  $$("[data-pday]").forEach((b) => (b.onclick = () => { planSel = b.dataset.pday; lsSet("ibd_plan_sel", planSel); planEdit = null; renderView(); }));
+  if ($("#pAddDay")) $("#pAddDay").onclick = async () => {
+    try {
+      const id = await S.add(user.uid, "schede", { name: `Giorno ${planDays().length + 1}`, blocks: emptyBlocks(), createdAt: Date.now() });
+      planSel = id; lsSet("ibd_plan_sel", id); planEdit = null; await reload(); renderView();
+    } catch (e) { planErr(e); }
+  };
+  if (!sc) return;
+  $("#pName").onchange = (e) => planSave(sc, { name: e.target.value.trim() || sc.name });
+  $$("[data-prest]").forEach((i) => (i.onchange = () => { const bl = { ...sc.blocks }; bl[i.dataset.prest] = { ...bl[i.dataset.prest], rest: i.value.trim() }; planSave(sc, { blocks: bl }); }));
+  $$("[data-ptype]").forEach((b) => (b.onclick = () => { planType = b.dataset.ptype; renderView(); }));
+  $$("[data-pwod]").forEach((el) => (el.onclick = () => {
+    const it = sc.blocks.wod.items[+el.dataset.pwod], w = it && allWods().find((x) => x.id === it.wodId);
+    if (!w) return toast("Questo WOD non esiste più: sceglilo dalla pagina WOD", true);
+    lsSet("ibd_today_wod", w.id); setupTimer(null); go("wod");
+  }));
+  $$("[data-psave]").forEach((b) => (b.onclick = () => {
+    const [t, i] = b.dataset.psave.split(":"), it = sc.blocks[t].items[+i]; if (!it) return;
+    const e = { kind: "training", status: "done", exercise: it.exercise, kg: it.kg || 0, reps: parseInt(String(it.reps)) || 1, sets: it.sets || 1, scheda: sc.name, date: Date.now(), createdAt: Date.now() };
+    e.kcal = kcalFor(e); save("entries", e, `Salvato nello storico: ${it.exercise} ✔`);
+  }));
+  $$("[data-pedit]").forEach((b) => (b.onclick = () => {
+    const [t, i] = b.dataset.pedit.split(":"); planEdit = { t, i: +i }; planType = t; renderView();
+    const el = $("#pEx"); if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }));
+  $$("[data-pdel]").forEach((b) => (b.onclick = () => {
+    if (!armDelete(b)) return;
+    const [t, i] = b.dataset.pdel.split(":"), bl = { ...sc.blocks };
+    bl[t] = { ...bl[t], items: bl[t].items.filter((_, k) => k !== +i) }; planEdit = null; planSave(sc, { blocks: bl });
+  }));
+  if ($("#pAdd")) $("#pAdd").onclick = () => {
+    const ex = $("#pEx").value.trim(), sets = parseInt($("#pSets").value) || 1, reps = $("#pReps").value.trim(), kg = parseFloat($("#pKg").value) || 0;
+    if (!ex) return toast("Scrivi il nome dell'esercizio", true);
+    if (!reps) return toast("Inserisci le ripetizioni (es. 8 oppure 8-10)", true);
+    const t = planEdit ? planEdit.t : planType, bl = { ...sc.blocks }, items = [...bl[t].items], it = { exercise: ex, sets, reps, kg }, editing = !!planEdit;
+    if (editing) items[planEdit.i] = it; else items.push(it);
+    bl[t] = { ...bl[t], items }; planEdit = null;
+    planSave(sc, { blocks: bl }, editing ? "Modifica salvata ✔" : `${ex} aggiunto al piano ✔`);
+  };
+  if ($("#pCancelEdit")) $("#pCancelEdit").onclick = () => { planEdit = null; renderView(); };
+  if ($("#pAddWod")) $("#pAddWod").onclick = () => {
+    const w = allWods().find((x) => x.id === $("#pWod").value); if (!w) return;
+    const bl = { ...sc.blocks }; bl.wod = { ...bl.wod, items: [...bl.wod.items, wodSnap(w)] };
+    planSave(sc, { blocks: bl }, `WOD ${w.name} aggiunto al piano ✔`);
+  };
+  $("#pDelDay").onclick = async (ev) => {
+    if (!armDelete(ev.currentTarget)) return;
+    try { await S.remove(user.uid, "schede", sc.id); planSel = null; lsSet("ibd_plan_sel", ""); planEdit = null; await reload(); renderView(); toast("Giorno eliminato"); }
+    catch (e) { planErr(e); }
+  };
+}
 
 /* ---- WOD ---- */
 V.wod = {
