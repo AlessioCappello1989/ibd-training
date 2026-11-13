@@ -315,6 +315,7 @@ async function applyScheda(sc, dayMs) {
   } catch (err) { toast("Errore: " + err.message, true); }
 }
 
+const doneToday = (sc, it) => D.entries.find((e) => isDone(e) && e.kind === "training" && e.scheda === sc.name && e.exercise === it.exercise && sod(e.date) === sod(Date.now()));
 function planHtml() {
   const days = planDays(), sc = curDay();
   const chips = `<div class="chips scroll">${days.map((d) => `<button class="chip ${sc && d.id === sc.id ? "on" : ""}" data-pday="${d.id}">${esc(d.name)}</button>`).join("")}<button class="chip" id="pAddDay" aria-label="Aggiungi un giorno">+</button></div>`;
@@ -327,7 +328,7 @@ function planHtml() {
     const title = t === "wod" ? (m ? `WOD · ${m} minuti` : "WOD") : BTL[t];
     const rows = b.items.map((it, i) => t === "wod"
       ? `<div class="pi wod"><div class="pix" data-pwod="${i}" role="button" tabindex="0"><div class="nm">WOD · ${esc(it.name)}</div><div class="tp">${esc(String(it.sub || "").replace(/ min\b/, " minuti"))}</div>${(it.moves || []).length ? `<div class="tp">${esc(it.moves.join(" · "))}</div>` : ""}<div class="tp">tocca per registrare il risultato e vai nella pagina WOD per confermarlo.</div></div><div class="pia"><button data-pdel="${t}:${i}" aria-label="Elimina">✖️</button></div></div>`
-      : `<div class="pi"><div class="pix"><div class="nm">${esc(it.exercise)}</div><div class="tp">${esc(setLineP(it))}</div></div><div class="pia"><button data-psave="${t}:${i}" aria-label="Salva nello storico">💾</button><button data-pedit="${t}:${i}" aria-label="Modifica">✏️</button><button data-pdel="${t}:${i}" aria-label="Elimina">✖️</button></div></div>`).join("");
+      : `<div class="pi ${doneToday(sc, it) ? "isdone" : ""}"><div class="pix"><div class="nm">${esc(it.exercise)}</div><div class="tp">${esc(setLineP(it))}</div></div><div class="pia">${doneToday(sc, it) ? `<button class="ok" data-psave="${t}:${i}" aria-label="Fatto oggi: tocca per annullare">✓</button>` : `<button data-psave="${t}:${i}" aria-label="Salva nello storico">💾</button>`}<button data-pedit="${t}:${i}" aria-label="Modifica">✏️</button><button data-pdel="${t}:${i}" aria-label="Elimina">✖️</button></div></div>`).join("");
     const rest = t === "wod" ? "" : `<label for="pRest_${t}">Recupero ${BTL[t].toLowerCase()}</label><input id="pRest_${t}" data-prest="${t}" placeholder="Es. Recupero 60 secondi" value="${esc(b.rest || "")}" autocomplete="off">`;
     return `<div class="pbh">${esc(title)}</div>${rows}${rest}`;
   };
@@ -354,7 +355,7 @@ function planHtml() {
     <input id="pName" value="${esc(sc.name)}" autocomplete="off">
     ${BT.map(blk).join("")}
     ${form}
-    <button class="link" id="pDelDay" style="color:var(--red);margin-top:18px">Elimina questo giorno</button>
+    <button class="btn outline sm" id="pDelDay" style="margin-top:22px;color:var(--red);border-color:var(--red)">🗑 Elimina il giorno «${esc(sc.name)}»</button>
   </div>`;
 }
 
@@ -378,6 +379,8 @@ function planBind() {
   }));
   $$("[data-psave]").forEach((b) => (b.onclick = () => {
     const [t, i] = b.dataset.psave.split(":"), it = sc.blocks[t].items[+i]; if (!it) return;
+    const prev = doneToday(sc, it);
+    if (prev) { S.remove(user.uid, "entries", prev.id).then(reload).then(renderAll).then(() => toast("Segnato come non fatto")).catch(planErr); return; }
     const e = { kind: "training", status: "done", exercise: it.exercise, kg: it.kg || 0, reps: parseInt(String(it.reps)) || 1, sets: it.sets || 1, scheda: sc.name, date: Date.now(), createdAt: Date.now() };
     e.kcal = kcalFor(e); save("entries", e, `Salvato nello storico: ${it.exercise} ✔`);
   }));
