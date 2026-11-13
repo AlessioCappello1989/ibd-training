@@ -6,7 +6,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 let user = null, view = "allena", authMode = "in";
-let D = { entries: [], results: [], wods: [] };
+let D = { entries: [], results: [], wods: [], schede: [] };
 let newType = "AMRAP";
 let timerWod = null, lastElapsed = 0;
 
@@ -63,6 +63,10 @@ const toast = (msg, bad) => {
 };
 const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 const isToday = (ms) => dayKey(ms) === dayKey(Date.now());
+const sod = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const isDone = (e) => e.status !== "plan";
+const iso = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+let selDay = sod(Date.now());
 const fd = (ms) => new Date(ms).toLocaleDateString("it-IT", { day: "numeric", month: "short" }).replace(".", "");
 const num = (n) => (Math.round(n * 10) / 10).toString().replace(".", ",");
 const epley = (kg, r) => (r <= 1 ? kg : kg * (1 + r / 30));
@@ -71,7 +75,7 @@ const fmtTime = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = 
 
 function groups() {
   const m = new Map();
-  for (const e of [...D.entries].sort((a, b) => a.date - b.date)) {
+  for (const e of D.entries.filter(isDone).sort((a, b) => a.date - b.date)) {
     const k = e.exercise.trim().toLowerCase();
     if (!m.has(k)) m.set(k, { key: k, name: e.exercise.trim(), list: [] });
     const g = m.get(k); g.name = e.exercise.trim(); g.list.push(e);
@@ -192,7 +196,7 @@ pressable($("#tileLap"), () => {
 }, () => { laps = 0; lapStart = 0; clearInterval(lapInt); paintLap(); });
 
 function paintKcal() {
-  const today = D.entries.filter((e) => isToday(e.date) && e.kind !== "max");
+  const today = D.entries.filter((e) => isToday(e.date) && e.kind !== "max" && isDone(e));
   $("#kcal").textContent = today.reduce((a, e) => a + (e.kcal || 0), 0);
   $("#kHint").textContent = today.length ? `${today.length} ${today.length === 1 ? "esercizio" : "esercizi"} oggi` : "salva un esercizio…";
 }
@@ -200,38 +204,183 @@ function paintKcal() {
 /* ======================= VIEWS ======================= */
 const V = {};
 
-/* ---- ALLENA ---- */
+/* ---- ALLENA (programma per giorno) ---- */
+const DAYN = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+const addDays = (ms, n) => { const d = new Date(ms); d.setDate(d.getDate() + n); return sod(d.getTime()); };
+const weekStartOf = (ms) => { const d = new Date(sod(ms)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return sod(d.getTime()); };
+const dayList = (ms) => D.entries.filter((e) => e.kind !== "max" && dayKey(e.date) === dayKey(ms)).sort((a, b) => (a.createdAt || a.date) - (b.createdAt || b.date));
+let formStatus = null;
 V.allena = {
   html() {
-    const g = groups();
-    const today = D.entries.filter((e) => isToday(e.date) && e.kind !== "max").sort((a, b) => b.date - a.date);
-    const names = [...new Set([...g.map((x) => x.name), "Back squat", "Front squat", "Deadlift", "Clean", "Snatch", "Strict press", "Push press", "Bench press", "Thruster", "Pull-up"])];
+    const today = sod(Date.now()), ws = weekStartOf(selDay);
+    const days = [...Array(7)].map((_, i) => addDays(ws, i));
+    const list = dayList(selDay), nDone = list.filter(isDone).length;
+    const st = formStatus || (selDay < today ? "done" : "plan");
+    const recent = [...new Set([...D.entries].sort((a, b) => b.date - a.date).map((e) => e.exercise.trim()))];
+    const names = [...new Set([...recent, "Back squat", "Front squat", "Deadlift", "Clean", "Snatch", "Strict press", "Push press", "Bench press", "Thruster", "Pull-up"])];
+    const month = new Date(selDay).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    const long = new Date(selDay).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+    const dot = (d) => { const l = dayList(d); return !l.length ? "" : l.every(isDone) ? "all" : "plan"; };
     return `
-    <div class="card"><h2>Allenamento</h2>
-      <label for="aEx" style="margin-top:0">Esercizio</label>
+    <div class="card">
+      <div class="weekbar"><button class="wk" data-wk="-1" aria-label="Settimana precedente">‹</button><div class="wlabel">${esc(month)}</div><button class="wk" data-wk="1" aria-label="Settimana successiva">›</button></div>
+      <div class="days">${days.map((d, i) => `<button class="day ${d === selDay ? "sel" : ""} ${d === today ? "tod" : ""}" data-day="${d}"><small>${DAYN[i]}</small><b>${new Date(d).getDate()}</b><i class="dot ${dot(d)}"></i></button>`).join("")}</div>
+      ${selDay !== today ? `<button class="link todaylink" id="dToday">Vai a oggi</button>` : ""}
+    </div>
+
+    <div class="card"><h2 style="text-transform:capitalize">${esc(long)}</h2>
+      <p class="cnt">${list.length ? `${nDone} di ${list.length} fatti` : "Nessun esercizio in programma"}</p>
+      ${list.length ? list.map((e) => `<div class="item ${isDone(e) ? "done" : ""}"><button class="chk" data-chk="${e.id}" aria-label="${isDone(e) ? "Rimetti da fare" : "Segna come fatto"}">${isDone(e) ? "✓" : ""}</button><div class="itx"><div class="nm">${esc(e.exercise)}</div><div class="tp">${e.kg ? num(e.kg) + " kg × " : ""}${e.reps} rip × ${e.sets} serie${e.scheda ? " · " + esc(e.scheda) : ""}</div></div><button class="x" data-del="entries:${e.id}" aria-label="Elimina">✕</button></div>`).join("") : `<p class="muted" style="margin:0">Aggiungi gli esercizi di questo giorno qui sotto, oppure usa una delle tue schede.</p>`}
+      ${D.schede.length ? `<div class="useSc"><select id="sPick" aria-label="Scegli una scheda"><option value="">Aggiungi una scheda…</option>${D.schede.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select><button class="btn primary sm" id="sApply">Aggiungi</button></div>` : `<button class="btn outline sm" id="sGo">Crea una scheda</button>`}
+      ${list.length ? `<div class="useSc"><input id="sName" placeholder="Nome nuova scheda" aria-label="Nome nuova scheda" autocomplete="off"><button class="btn outline sm" id="sAs">Salva come scheda</button></div><button class="btn outline sm" id="dDup">Duplica al giorno dopo</button>` : ""}
+    </div>
+
+    <div class="card"><h2>Aggiungi esercizio</h2>
+      <div class="seg"><button type="button" data-st="plan" class="${st === "plan" ? "on" : ""}">Da fare</button><button type="button" data-st="done" class="${st === "done" ? "on" : ""}">Fatto</button></div>
+      <label for="aEx">Esercizio</label>
       <input id="aEx" list="exList" placeholder="Es. Back squat" autocomplete="off">
       <datalist id="exList">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
-      ${g.length ? `<div class="chips sm">${g.slice(0, 6).map((x) => `<button class="chip" data-ex="${esc(x.name)}">${esc(x.name)}</button>`).join("")}</div>` : ""}
+      ${recent.length ? `<div class="chips sm">${recent.slice(0, 6).map((x) => `<button class="chip" data-ex="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}
       <div class="g3">
         <div><label for="aKg">Peso (kg)</label><input id="aKg" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0"></div>
         <div><label for="aReps">Ripetizioni</label><input id="aReps" type="number" inputmode="numeric" min="1" value="10"></div>
         <div><label for="aSets">Serie</label><input id="aSets" type="number" inputmode="numeric" min="1" value="1"></div>
       </div>
-      <button class="btn primary" id="aSave">Salva esercizio</button>
-    </div>
-    <div class="card"><h2>Oggi</h2>
-      ${today.length ? today.map((e) => `<div class="row"><div><div class="nm">${esc(e.exercise)}</div><div class="tp">${num(e.kg)} kg × ${e.reps} rip × ${e.sets} ${e.sets === 1 ? "serie" : "serie"} · ${e.kcal} kcal</div></div><button class="x" data-del="entries:${e.id}" aria-label="Elimina">✕</button></div>`).join("") : `<p class="muted" style="margin:0">Nessun esercizio salvato oggi.</p>`}
+      <button class="btn primary" id="aSave">Aggiungi al giorno</button>
     </div>`;
   },
   bind() {
-    $$("[data-ex]").forEach((b) => (b.onclick = () => { $("#aEx").value = b.dataset.ex; const last = groups().find((x) => x.name === b.dataset.ex)?.list.at(-1); if (last) { $("#aKg").value = last.kg || ""; $("#aReps").value = last.reps; } $("#aKg").focus(); }));
+    $$("[data-wk]").forEach((b) => (b.onclick = () => { selDay = addDays(selDay, +b.dataset.wk * 7); formStatus = null; renderView(); }));
+    $$("[data-day]").forEach((b) => (b.onclick = () => { selDay = +b.dataset.day; formStatus = null; renderView(); }));
+    if ($("#dToday")) $("#dToday").onclick = () => { selDay = sod(Date.now()); formStatus = null; renderView(); };
+    $$(".seg button").forEach((b) => (b.onclick = () => { formStatus = b.dataset.st; $$(".seg button").forEach((x) => x.classList.toggle("on", x === b)); }));
+    $$("[data-ex]").forEach((b) => (b.onclick = () => {
+      $("#aEx").value = b.dataset.ex;
+      const last = [...D.entries].filter(isDone).sort((a, c) => c.date - a.date).find((x) => x.exercise.trim() === b.dataset.ex);
+      if (last) { $("#aKg").value = last.kg || ""; $("#aReps").value = last.reps; $("#aSets").value = last.sets || 1; }
+      $("#aKg").focus();
+    }));
+    $$("[data-chk]").forEach((b) => (b.onclick = async () => {
+      const e = D.entries.find((x) => x.id === b.dataset.chk); if (!e) return;
+      const next = isDone(e) ? "plan" : "done", patch = { status: next };
+      if (next === "done" && sod(e.date) === sod(Date.now())) patch.date = Date.now();
+      try { await S.update(user.uid, "entries", e.id, patch); await reload(); renderAll(); toast(next === "done" ? "Fatto ✔" : "Rimesso da fare"); }
+      catch (err) { toast("Errore: " + err.message, true); }
+    }));
+    if ($("#sGo")) $("#sGo").onclick = () => { draft = draft || { id: null, name: "", items: [] }; go("schede"); };
+    if ($("#sApply")) $("#sApply").onclick = () => {
+      const sc = D.schede.find((x) => x.id === $("#sPick").value);
+      if (!sc) return toast("Scegli una scheda dall'elenco", true);
+      applyScheda(sc, selDay);
+    };
+    if ($("#sAs")) $("#sAs").onclick = async () => {
+      const name = $("#sName").value.trim();
+      if (!name) return toast("Scrivi il nome della scheda", true);
+      const items = dayList(selDay).map((e) => ({ exercise: e.exercise, kg: e.kg || 0, reps: e.reps, sets: e.sets }));
+      await save("schede", { name, items, createdAt: Date.now() }, `Scheda «${name}» salvata ✔`);
+    };
+    if ($("#dDup")) $("#dDup").onclick = async () => {
+      const src = dayList(selDay), when = addDays(selDay, 1) + 12 * 36e5;
+      try {
+        for (let i = 0; i < src.length; i++) { const e = src[i]; await S.add(user.uid, "entries", { kind: "training", status: "plan", exercise: e.exercise, kg: e.kg, reps: e.reps, sets: e.sets, kcal: e.kcal, date: when, createdAt: Date.now() + i }); }
+        await reload(); renderAll(); toast(`Copiati ${src.length} esercizi sul giorno dopo ✔`);
+      } catch (err) { toast("Errore: " + err.message, true); }
+    };
     $("#aSave").onclick = async () => {
       const ex = $("#aEx").value.trim(), kg = parseFloat($("#aKg").value) || 0, reps = parseInt($("#aReps").value) || 0, sets = parseInt($("#aSets").value) || 1;
+      const status = $(".seg .on").dataset.st;
       if (!ex) return toast("Scrivi il nome dell'esercizio", true);
       if (reps < 1) return toast("Inserisci le ripetizioni", true);
-      const e = { kind: "training", exercise: ex, kg, reps, sets, date: Date.now() }; e.kcal = kcalFor(e);
-      await save("entries", e, `Salvato: ${ex} ${num(kg)} kg ✔`);
+      const date = status === "done" && sod(selDay) === sod(Date.now()) ? Date.now() : selDay + 12 * 36e5;
+      const e = { kind: "training", status, exercise: ex, kg, reps, sets, date, createdAt: Date.now() }; e.kcal = kcalFor(e);
+      await save("entries", e, status === "plan" ? `In programma: ${ex} ✔` : `Salvato: ${ex} ${num(kg)} kg ✔`);
     };
+  },
+};
+
+/* ---- SCHEDE ---- */
+let draft = null; // scheda in modifica: { id, name, items: [{exercise,kg,reps,sets}], reps, sets }
+const longDay = (ms) => new Date(ms).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+async function applyScheda(sc, dayMs) {
+  const when = sod(dayMs) + 12 * 36e5;
+  try {
+    for (let i = 0; i < sc.items.length; i++) {
+      const it = sc.items[i], e = { kind: "training", status: "plan", exercise: it.exercise, kg: it.kg || 0, reps: it.reps, sets: it.sets, scheda: sc.name, date: when, createdAt: Date.now() + i };
+      e.kcal = kcalFor(e); await S.add(user.uid, "entries", e);
+    }
+    selDay = sod(dayMs); formStatus = null; await reload(); paintKcal();
+    if (view !== "allena") go("allena"); else renderView();
+    toast(`«${sc.name}» aggiunta a ${longDay(dayMs)} ✔`);
+  } catch (err) { toast("Errore: " + err.message, true); }
+}
+V.schede = {
+  html() {
+    if (draft) {
+      const d = draft, names = [...new Set([...groups().map((x) => x.name), ...D.schede.flatMap((s) => s.items.map((i) => i.exercise)), "Back squat", "Front squat", "Deadlift", "Strict press", "Bench press", "Pull-up"])];
+      return `
+      <div class="card"><h2>${d.id ? "Modifica scheda" : "Nuova scheda"}</h2>
+        <label for="dName" style="margin-top:0">Nome della scheda</label>
+        <input id="dName" placeholder="Es. Scheda A · Gambe" value="${esc(d.name)}" autocomplete="off">
+        <h3 style="margin-top:20px">Esercizi della scheda (${d.items.length})</h3>
+        ${d.items.length ? d.items.map((it, i) => `<div class="item"><div class="itx"><div class="nm">${esc(it.exercise)}</div><div class="tp">${it.kg ? num(it.kg) + " kg × " : ""}${it.reps} rip × ${it.sets} serie</div></div><button class="x" data-rm="${i}" aria-label="Rimuovi">✕</button></div>`).join("") : `<p class="muted" style="margin:6px 0 0">Ancora nessun esercizio: aggiungine uno qui sotto.</p>`}
+      </div>
+      <div class="card"><h2>Aggiungi alla scheda</h2>
+        <label for="dEx" style="margin-top:0">Esercizio</label>
+        <input id="dEx" list="exList3" placeholder="Es. Back squat" autocomplete="off"><datalist id="exList3">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+        <div class="g3">
+          <div><label for="dKg">Peso (kg)</label><input id="dKg" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0"></div>
+          <div><label for="dReps">Ripetizioni</label><input id="dReps" type="number" inputmode="numeric" min="1" value="${d.reps || 10}"></div>
+          <div><label for="dSets">Serie</label><input id="dSets" type="number" inputmode="numeric" min="1" value="${d.sets || 3}"></div>
+        </div>
+        <button class="btn outline sm" id="dAdd">+ Aggiungi esercizio</button>
+      </div>
+      <button class="btn primary" id="dSave">Salva scheda</button>
+      <button class="btn outline sm" id="dCancel" style="margin-bottom:16px">Annulla</button>`;
+    }
+    return `
+    <div class="card"><h2>Le tue schede</h2>
+      <p class="small">Crea una scheda, dalle un nome e inserisci i suoi esercizi. Poi aggiungila ai giorni che vuoi.</p>
+      <button class="btn primary" id="scNew" style="margin-top:0">+ Nuova scheda</button>
+    </div>
+    ${D.schede.length ? `<div class="card"><h2>Aggiungi a un giorno</h2>
+      <label for="scDay" style="margin-top:0">Giorno</label>
+      <input id="scDay" type="date" value="${iso(selDay)}">
+      <p class="small" style="margin:8px 0 0">${esc(longDay(selDay))}</p>
+      ${D.schede.map((s) => `<div class="sc"><div class="nm">${esc(s.name)}</div><div class="tp">${s.items.length} ${s.items.length === 1 ? "esercizio" : "esercizi"}${s.items.length ? " · " + esc(s.items.slice(0, 3).map((i) => i.exercise).join(", ")) + (s.items.length > 3 ? "…" : "") : ""}</div>
+        <div class="scb"><button class="btn primary sm" data-use="${s.id}">Aggiungi al giorno</button><button class="btn outline sm" data-edit="${s.id}">Modifica</button><button class="x" data-del="schede:${s.id}" aria-label="Elimina scheda">✕</button></div></div>`).join("")}
+    </div>` : ""}`;
+  },
+  bind() {
+    if (draft) {
+      const sync = () => { draft.name = $("#dName").value; };
+      $("#dName").oninput = sync;
+      $$("[data-rm]").forEach((b) => (b.onclick = () => { sync(); draft.items.splice(+b.dataset.rm, 1); renderView(); }));
+      $("#dAdd").onclick = () => {
+        sync();
+        const ex = $("#dEx").value.trim(), kg = parseFloat($("#dKg").value) || 0, reps = parseInt($("#dReps").value) || 0, sets = parseInt($("#dSets").value) || 1;
+        if (!ex) return toast("Scrivi il nome dell'esercizio", true);
+        if (reps < 1) return toast("Inserisci le ripetizioni", true);
+        draft.items.push({ exercise: ex, kg, reps, sets }); draft.reps = reps; draft.sets = sets;
+        renderView(); toast(`${ex} aggiunto alla scheda`);
+      };
+      $("#dCancel").onclick = () => { draft = null; renderView(); };
+      $("#dSave").onclick = async () => {
+        sync();
+        const name = draft.name.trim();
+        if (!name) return toast("Dai un nome alla scheda", true);
+        if (!draft.items.length) return toast("Aggiungi almeno un esercizio", true);
+        try {
+          if (draft.id) await S.update(user.uid, "schede", draft.id, { name, items: draft.items });
+          else await S.add(user.uid, "schede", { name, items: draft.items, createdAt: Date.now() });
+          draft = null; await reload(); renderAll(); toast(`Scheda «${name}» salvata ✔`);
+        } catch (e) { toast("Errore di salvataggio: " + (e.code === "permission-denied" ? "regole Firestore non pubblicate" : e.message), true); }
+      };
+      return;
+    }
+    $("#scNew").onclick = () => { draft = { id: null, name: "", items: [] }; renderView(); scrollTo(0, 0); };
+    if ($("#scDay")) $("#scDay").onchange = (e) => { const t = new Date(e.target.value + "T12:00:00").getTime(); if (!isNaN(t)) { selDay = sod(t); renderView(); } };
+    $$("[data-use]").forEach((b) => (b.onclick = () => { const sc = D.schede.find((x) => x.id === b.dataset.use); if (sc) applyScheda(sc, selDay); }));
+    $$("[data-edit]").forEach((b) => (b.onclick = () => { const sc = D.schede.find((x) => x.id === b.dataset.edit); if (sc) { draft = { id: sc.id, name: sc.name, items: sc.items.map((i) => ({ ...i })) }; renderView(); scrollTo(0, 0); } }));
   },
 };
 
@@ -303,11 +452,10 @@ function openWodList() {
     <div class="row"><button style="text-align:left;flex:1" data-pick="${w.id}"><div class="nm">${esc(w.name)}</div><div class="tp">${esc(wodSub(w))}${w.id.startsWith("p-") ? "" : " · tuo WOD"}</div></button>
     ${w.id.startsWith("p-") ? "" : `<button class="x" data-delwod="${w.id}" aria-label="Elimina">✕</button>`}</div>`).join("");
   $$("[data-pick]").forEach((b) => (b.onclick = () => { lsSet("ibd_today_wod", b.dataset.pick); $("#wodDlg").close(); setupTimer(null); renderView(); }));
-  $$("[data-delwod]").forEach((b) => (b.onclick = async () => {
-    if (!confirm("Eliminare questo WOD?")) return;
+  $$("[data-delwod]").forEach((b) => (b.onclick = () => arm(b, "w" + b.dataset.delwod, async () => {
     await S.remove(user.uid, "wods", b.dataset.delwod); if (lsGet("ibd_today_wod") === b.dataset.delwod) lsSet("ibd_today_wod", "");
     await reload(); openWodList(); renderView();
-  }));
+  })));
   $("#wodDlg").showModal();
 }
 $("#wodClose").onclick = () => $("#wodDlg").close();
@@ -446,8 +594,8 @@ async function save(col, obj, msg) {
   catch (e) { toast("Errore di salvataggio: " + (e.code === "permission-denied" ? "regole Firestore non pubblicate" : e.message), true); }
 }
 async function reload() {
-  const [entries, results, wods] = await Promise.all(["entries", "results", "wods"].map((c) => S.list(user.uid, c)));
-  D = { entries, results, wods };
+  const [entries, results, wods, schede] = await Promise.all(["entries", "results", "wods", "schede"].map((c) => S.list(user.uid, c)));
+  D = { entries, results, wods, schede };
 }
 function renderView() {
   const y = scrollY;
@@ -459,12 +607,22 @@ function renderAll() { paintKcal(); renderView(); }
 function go(v) { view = v; renderView(); scrollTo(0, 0); }
 $$("#nav button").forEach((b) => (b.onclick = () => go(b.dataset.view)));
 
-$("#main").addEventListener("click", async (ev) => {
+let armKey = null, armT;
+function arm(btn, key, fn) {
+  if (armKey !== key) {
+    armKey = key; const old = btn.textContent; btn.textContent = "Elimina?"; btn.style.fontSize = ".95rem";
+    clearTimeout(armT); armT = setTimeout(() => { armKey = null; if (btn.isConnected) { btn.textContent = old; btn.style.fontSize = ""; } }, 2500);
+    return;
+  }
+  armKey = null; clearTimeout(armT); fn();
+}
+$("#main").addEventListener("click", (ev) => {
   const d = ev.target.closest("[data-del]"); if (!d) return;
   ev.stopPropagation();
-  if (!confirm("Eliminare?")) return;
   const [col, id] = d.dataset.del.split(":");
-  try { await S.remove(user.uid, col, id); await reload(); renderAll(); toast("Eliminato"); } catch (e) { toast("Errore: " + e.message, true); }
+  arm(d, d.dataset.del, async () => {
+    try { await S.remove(user.uid, col, id); await reload(); renderAll(); toast("Eliminato"); } catch (e) { toast("Errore: " + e.message, true); }
+  });
 }, true);
 
 /* ======================= profilo ======================= */

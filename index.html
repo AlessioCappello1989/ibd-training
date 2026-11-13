@@ -37,7 +37,7 @@ label{display:block;font-size:.95rem;color:var(--muted);margin:12px 0 6px}
 .btn.light{background:#fff;color:#222;box-shadow:0 1px 0 rgba(0,0,0,.15)}
 .btn:active{transform:scale(.985);filter:brightness(.95)}
 .link{color:var(--blue);font-weight:600;padding:8px}
-.wrap{max-width:520px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px 120px}
+.wrap{max-width:520px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right,0px)) 120px max(16px,env(safe-area-inset-left,0px))}
 
 /* header */
 .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -108,9 +108,46 @@ label{display:block;font-size:.95rem;color:var(--muted);margin:12px 0 6px}
 canvas{width:100%;height:230px;display:block}
 .small{font-size:.9rem;color:var(--muted)}
 
+/* planner */
+.weekbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.wlabel{font-family:var(--head);font-weight:700;font-size:1.5rem;text-transform:capitalize;flex:1;text-align:center}
+.wk{width:44px;height:44px;border-radius:50%;background:var(--cream2);font-size:1.6rem;font-weight:700;line-height:1}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.day{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 7px;border-radius:14px;background:var(--cream2);min-width:0}
+.day small{font-size:.74rem;color:var(--muted);text-transform:uppercase;font-weight:600}
+.day b{font-family:var(--head);font-size:1.55rem;line-height:1}
+.day.tod b{color:var(--blue)}
+.day.sel{background:var(--blue)}
+.day.sel small,.day.sel b{color:#fff}
+.dot{width:7px;height:7px;border-radius:50%;background:transparent;margin-top:3px}
+.dot.plan{background:var(--orange)} .dot.all{background:var(--green)}
+.day.sel .dot.plan{background:#ffd2a1} .day.sel .dot.all{background:#8dffc4}
+.todaylink{display:block;margin:10px auto 0}
+.cnt{color:var(--muted);margin:-2px 0 6px}
+.item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.itx{flex:1;min-width:0}
+.item .nm{font-family:var(--head);font-weight:700;font-size:1.4rem;line-height:1.05;overflow-wrap:break-word}
+.item .tp{color:var(--muted);font-size:.95rem;margin-top:3px}
+.chk{width:36px;height:36px;flex:none;border-radius:11px;border:2px solid var(--line);background:#fff;font-weight:800;color:#fff;font-size:1.15rem}
+.item.done .chk{background:var(--green);border-color:var(--green)}
+.item.done .nm{color:var(--muted);text-decoration:line-through}
+.seg{display:flex;background:var(--cream2);border-radius:14px;padding:4px;margin-bottom:4px}
+.seg button{flex:1;padding:11px;border-radius:11px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--blue);color:#fff}
+.btn.sm{font-family:var(--body);font-size:1rem;padding:12px}
+.useSc{display:flex;gap:8px;align-items:stretch;margin-top:12px}
+.useSc select,.useSc input{flex:1;min-width:0;padding:12px}
+.useSc .btn{width:auto;flex:none;margin-top:0;padding:12px 14px}
+.sc{padding:16px 0;border-bottom:1px solid var(--line)}
+.sc:last-child{border-bottom:0;padding-bottom:0}
+.sc .nm{font-family:var(--head);font-weight:700;font-size:1.5rem;line-height:1.05;overflow-wrap:break-word}
+.sc .tp{color:var(--muted);font-size:.95rem;margin-top:3px}
+.scb{display:flex;gap:8px;align-items:center;margin-top:12px}
+.scb .btn{flex:1;margin-top:0;width:auto}
+
 /* nav */
-.nav{position:fixed;left:0;right:0;bottom:0;background:var(--cream);display:flex;gap:6px;padding:8px 10px max(8px,env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(0,0,0,.18);z-index:10;max-width:520px;margin:0 auto;border-radius:22px 22px 0 0}
-.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:18px;font-family:var(--head);font-weight:700;font-size:1.1rem;color:#33322e}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--cream);display:flex;gap:6px;padding:8px max(10px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left,0px));box-shadow:0 -2px 12px rgba(0,0,0,.18);z-index:10;max-width:520px;margin:0 auto;border-radius:22px 22px 0 0}
+.nav button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:18px;font-family:var(--head);font-weight:700;font-size:1rem;color:#33322e}
 .nav button span{font-size:1.6rem;line-height:1}
 .nav button.on{background:var(--cream2);color:var(--blue)}
 
@@ -206,6 +243,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 
   <nav class="nav" id="nav">
     <button data-view="allena"><span>🏋️</span>Allena</button>
+    <button data-view="schede"><span>📋</span>Schede</button>
     <button data-view="wod"><span>🔥</span>WOD</button>
     <button data-view="progressi"><span>📈</span>Progressi</button>
     <button data-view="storico"><span>📚</span>Storico</button>
@@ -224,6 +262,6 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <button class="btn outline" id="profClose" type="button" style="font-size:1.2rem">Chiudi</button>
 </dialog>
 
-<script type="module" src="app.js?v=2"></script>
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>

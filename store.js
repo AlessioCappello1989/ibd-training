@@ -76,3 +76,10 @@ export async function remove(uid, col, id) {
   }
   await F.deleteDoc(F.doc(db, "users", uid, col, id));
 }
+export async function update(uid, col, id, patch) {
+  if (demo) {
+    localStorage.setItem(key(uid, col), JSON.stringify(ls(uid, col).map((x) => (x.id === id ? { ...x, ...patch } : x))));
+    return;
+  }
+  await F.updateDoc(F.doc(db, "users", uid, col, id), patch);
+}

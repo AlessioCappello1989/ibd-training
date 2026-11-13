@@ -14,4 +14,3 @@ index.html · app.js · store.js · timer.js · firebase-config.js · sw.js · m
 5. GitHub → Settings → Pages → Deploy from a branch → `main` / root.
 
 Finché `firebase-config.js` contiene `INSERISCI_...` l'app parte in modalità demo (dati solo sul telefono).
- 
