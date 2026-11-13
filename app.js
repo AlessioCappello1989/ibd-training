@@ -238,9 +238,7 @@ V.allena = {
 
     <div class="card"><h2 style="text-transform:capitalize">${esc(long)}</h2>
       <p class="cnt">${list.length ? `${nDone} di ${list.length} fatti` : "Nessun esercizio in programma"}</p>
-      ${list.length ? list.map((e) => `<div class="item ${isDone(e) ? "done" : ""}"><button class="chk" data-chk="${e.id}" aria-label="${isDone(e) ? "Rimetti da fare" : "Segna come fatto"}">${isDone(e) ? "✓" : ""}</button><div class="itx"><div class="nm">${esc(e.exercise)}</div><div class="tp">${e.kg ? num(e.kg) + " kg × " : ""}${e.reps} rip × ${e.sets} serie${e.scheda ? " · " + esc(e.scheda) : ""}</div></div><button class="x" data-del="entries:${e.id}" aria-label="Elimina">✕</button></div>`).join("") : `<p class="muted" style="margin:0">Usa «Aggiungi un giorno del piano» per programmare questo giorno.</p>`}
-      ${planDays().length ? `<div class="useSc"><select id="sPick" aria-label="Scegli un giorno del piano"><option value="">Aggiungi un giorno del piano…</option>${planDays().map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select><button class="btn primary sm" id="sApply">Aggiungi</button></div>` : ""}
-      ${list.length ? `<div class="useSc"><input id="sName" placeholder="Nome nuovo giorno del piano" aria-label="Nome nuovo giorno del piano" autocomplete="off"><button class="btn outline sm" id="sAs">Salva nel piano</button></div><button class="btn outline sm" id="dDup">Duplica al giorno dopo</button>` : ""}
+      ${list.length ? list.map((e) => `<div class="item ${isDone(e) ? "done" : ""}"><button class="chk" data-chk="${e.id}" aria-label="${isDone(e) ? "Rimetti da fare" : "Segna come fatto"}">${isDone(e) ? "✓" : ""}</button><div class="itx"><div class="nm">${esc(e.exercise)}</div><div class="tp">${e.kg ? num(e.kg) + " kg × " : ""}${e.reps} rip × ${e.sets} serie${e.scheda ? " · " + esc(e.scheda) : ""}</div></div><button class="x" data-del="entries:${e.id}" aria-label="Elimina">✕</button></div>`).join("") : `<p class="muted" style="margin:0">Nessun esercizio in questo giorno.</p>`}
     </div>
 `;
   },
@@ -256,26 +254,6 @@ V.allena = {
       try { await S.update(user.uid, "entries", e.id, patch); await reload(); renderAll(); toast(next === "done" ? "Fatto ✔" : "Rimesso da fare"); }
       catch (err) { toast("Errore: " + err.message, true); }
     }));
-    if ($("#sApply")) $("#sApply").onclick = () => {
-      const sc = planDays().find((x) => x.id === $("#sPick").value);
-      if (!sc) return toast("Scegli un giorno del piano dall'elenco", true);
-      applyScheda(sc, selDay);
-    };
-    if ($("#sAs")) $("#sAs").onclick = async () => {
-      const name = $("#sName").value.trim();
-      if (!name) return toast("Scrivi il nome del giorno", true);
-      const bl = emptyBlocks();
-      bl.allenamento.items = dayList(selDay).map((e) => ({ exercise: e.exercise, sets: e.sets || 1, reps: String(e.reps), kg: e.kg || 0 }));
-      try { const id = await S.add(user.uid, "schede", { name, blocks: bl, createdAt: Date.now() }); planSel = id; lsSet("ibd_plan_sel", id); await reload(); renderAll(); toast(`«${name}» salvato nel piano ✔`); }
-      catch (e) { toast("Errore: " + e.message, true); }
-    };
-    if ($("#dDup")) $("#dDup").onclick = async () => {
-      const src = dayList(selDay), when = addDays(selDay, 1) + 12 * 36e5;
-      try {
-        for (let i = 0; i < src.length; i++) { const e = src[i]; await S.add(user.uid, "entries", { kind: "training", status: "plan", exercise: e.exercise, kg: e.kg, reps: e.reps, sets: e.sets, kcal: e.kcal, date: when, createdAt: Date.now() + i }); }
-        await reload(); renderAll(); toast(`Copiati ${src.length} esercizi sul giorno dopo ✔`);
-      } catch (err) { toast("Errore: " + err.message, true); }
-    };
   },
 };
 
