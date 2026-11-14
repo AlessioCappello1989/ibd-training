@@ -90,6 +90,20 @@ label{display:block;font-size:.95rem;color:var(--muted);margin:12px 0 6px}
 .pdiv{border-top:4px solid var(--ink);margin:28px 0 18px}
 .pbt{font-family:var(--body);font-weight:700;font-size:1.55rem;margin:0}
 .g3b{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px 2px;text-align:center}
+.calg small{color:var(--muted);font-weight:600;font-size:1rem;padding-bottom:6px}
+.cd{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0 5px;border-radius:12px;border:2px solid transparent;min-width:0}
+.cd span{font-size:1.1rem;line-height:1}
+.cd.fut{opacity:.4}
+.cd.tod{border-color:var(--blue)}
+.cd.sel{background:var(--cream2)}
+.cdot{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;font-style:normal;font-weight:700;color:#fff;font-size:1rem}
+.cdot:empty{background:transparent}
+.cdot.off{background:#e2dfd7;box-shadow:inset 0 0 0 1px #cfcbc0}
+.cdot.on{background:var(--green)}
+.cdot.sm{width:18px;height:18px;font-size:.7rem;vertical-align:middle}
+.calsum{margin:14px 0 0;font-size:1.05rem}
+.caldet{margin-top:12px;padding:12px;border-radius:14px;background:var(--cream2);line-height:1.5}
 .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .chips.sm .chip{padding:8px 14px;font-size:1.05rem}
 .btn+.btn,.card .btn{margin-top:14px}
@@ -276,6 +290,6 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <button class="btn outline" id="profClose" type="button" style="font-size:1.2rem">Chiudi</button>
 </dialog>
 
-<script type="module" src="app.js?v=7"></script>
+<script type="module" src="app.js?v=8"></script>
 </body>
 </html>

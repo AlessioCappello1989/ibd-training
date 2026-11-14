@@ -258,9 +258,9 @@ V.allena = {
 };
 
 /* ---- PIANO DI ALLENAMENTO (giorni con blocchi Allenamento / Superset / WOD) ---- */
-const BT = ["allenamento", "superset", "wod"];
-const BTL = { allenamento: "Allenamento", superset: "Superset", wod: "WOD" };
-const emptyBlocks = () => ({ allenamento: { items: [], rest: "" }, superset: { items: [], rest: "" }, wod: { items: [] } });
+const BT = ["allenamento", "superset", "pump", "wod"];
+const BTL = { allenamento: "Allenamento", superset: "Superset", pump: "Pump", wod: "WOD" };
+const emptyBlocks = () => ({ allenamento: { items: [], rest: "" }, superset: { items: [], rest: "" }, pump: { items: [], rest: "" }, wod: { items: [] } });
 const normSc = (x) => {
   const b = emptyBlocks();
   if (x.blocks) BT.forEach((t) => { if (x.blocks[t]) b[t] = { ...b[t], ...x.blocks[t], items: [...(x.blocks[t].items || [])] }; });
@@ -281,7 +281,7 @@ async function planSave(sc, patch, msg) {
   catch (e) { planErr(e); }
 }
 async function applyScheda(sc, dayMs) {
-  const when = sod(dayMs) + 12 * 36e5, items = [...sc.blocks.allenamento.items, ...sc.blocks.superset.items];
+  const when = sod(dayMs) + 12 * 36e5, items = [...sc.blocks.allenamento.items, ...sc.blocks.superset.items, ...sc.blocks.pump.items];
   if (!items.length) return toast("Questo giorno del piano non ha esercizi", true);
   try {
     for (let i = 0; i < items.length; i++) {
@@ -366,11 +366,10 @@ function planBind() {
     const [t, i] = b.dataset.pedit.split(":"); planEdit = { t, i: +i }; planType = t; renderView();
     const el = $("#pEx"); if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }));
-  $$("[data-pdel]").forEach((b) => (b.onclick = () => {
-    if (!armDelete(b)) return;
+  $$("[data-pdel]").forEach((b) => (b.onclick = () => arm(b, "pd" + sc.id + b.dataset.pdel, () => {
     const [t, i] = b.dataset.pdel.split(":"), bl = { ...sc.blocks };
     bl[t] = { ...bl[t], items: bl[t].items.filter((_, k) => k !== +i) }; planEdit = null; planSave(sc, { blocks: bl });
-  }));
+  })));
   if ($("#pAdd")) $("#pAdd").onclick = () => {
     const ex = $("#pEx").value.trim(), sets = parseInt($("#pSets").value) || 1, reps = $("#pReps").value.trim(), kg = parseFloat($("#pKg").value) || 0;
     if (!ex) return toast("Scrivi il nome dell'esercizio", true);
@@ -386,11 +385,10 @@ function planBind() {
     const bl = { ...sc.blocks }; bl.wod = { ...bl.wod, items: [...bl.wod.items, wodSnap(w)] };
     planSave(sc, { blocks: bl }, `WOD ${w.name} aggiunto al piano ✔`);
   };
-  $("#pDelDay").onclick = async (ev) => {
-    if (!armDelete(ev.currentTarget)) return;
+  $("#pDelDay").onclick = (ev) => arm(ev.currentTarget, "pdd" + sc.id, async () => {
     try { await S.remove(user.uid, "schede", sc.id); planSel = null; lsSet("ibd_plan_sel", ""); planEdit = null; await reload(); renderView(); toast("Giorno eliminato"); }
     catch (e) { planErr(e); }
-  };
+  });
 }
 
 /* ---- WOD ---- */
@@ -556,6 +554,26 @@ function drawChart(canvas, pts) {
 }
 
 /* ---- STORICO ---- */
+let calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime(), calSel = null;
+function calHtml() {
+  const first = new Date(calMonth), y = first.getFullYear(), m = first.getMonth(), n = new Date(y, m + 1, 0).getDate(), today = sod(Date.now());
+  const trained = new Map();
+  D.entries.filter(isDone).forEach((e) => { const k = sod(e.date); (trained.get(k) || trained.set(k, []).get(k)).push(`${e.exercise}${e.kind === "max" ? " 🏆" : ""}`); });
+  D.results.forEach((r) => { const k = sod(r.date); (trained.get(k) || trained.set(k, []).get(k)).push(`WOD ${r.wod}`); });
+  const lead = (first.getDay() + 6) % 7; let nT = 0, nR = 0, cells = "";
+  for (let i = 0; i < lead; i++) cells += "<span></span>";
+  for (let d = 1; d <= n; d++) {
+    const ms = new Date(y, m, d).getTime(), t = trained.has(ms), fut = ms > today;
+    if (!fut) t ? nT++ : nR++;
+    cells += `<button class="cd ${fut ? "fut" : ""} ${ms === today ? "tod" : ""} ${ms === calSel ? "sel" : ""}" ${fut ? "disabled" : `data-cd="${ms}"`} aria-label="${d}${t ? ", allenato" : ""}"><span>${d}</span><i class="cdot ${t ? "on" : fut ? "" : "off"}">${t ? "✓" : ""}</i></button>`;
+  }
+  const title = first.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+  const det = calSel && trained.has(calSel) ? `<div class="caldet"><b style="text-transform:capitalize">${esc(longDay(calSel))}</b><br>${[...new Set(trained.get(calSel))].map(esc).join(" · ")}</div>` : "";
+  return `<div class="card"><h2>Calendario allenamenti</h2>
+    <div class="weekbar"><button class="wk" data-cm="-1" aria-label="Mese precedente">‹</button><div class="wlabel" style="text-transform:capitalize">${esc(title)}</div><button class="wk" data-cm="1" aria-label="Mese successivo">›</button></div>
+    <div class="calg">${["L", "M", "M", "G", "V", "S", "D"].map((x) => `<small>${x}</small>`).join("")}${cells}</div>
+    <p class="calsum"><i class="cdot on sm">✓</i> ${nT} giorni allenati · <i class="cdot off sm"></i> ${nR} giorni di riposo</p>${det}</div>`;
+}
 V.storico = {
   html() {
     const g = groups();
@@ -567,6 +585,7 @@ V.storico = {
     });
     const res = [...D.results].sort((a, b) => b.date - a.date);
     return `
+    ${calHtml()}
     <div class="card"><h2>Allenamenti</h2>
       ${g.length ? g.map((x) => {
         const first = x.list[0], last = x.list.at(-1), many = x.list.length > 1 && dayKey(first.date) !== dayKey(last.date);
@@ -593,6 +612,8 @@ V.storico = {
   },
   open: {},
   bind() {
+    $$("[data-cm]").forEach((b) => (b.onclick = () => { const d = new Date(calMonth); d.setMonth(d.getMonth() + +b.dataset.cm); calMonth = d.getTime(); calSel = null; renderView(); }));
+    $$("[data-cd]").forEach((b) => (b.onclick = () => { calSel = calSel === +b.dataset.cd ? null : +b.dataset.cd; renderView(); }));
     $$("[data-tg]").forEach((b) => (b.onclick = () => { V.storico.open[b.dataset.tg] = !V.storico.open[b.dataset.tg]; renderView(); }));
   },
 };
