@@ -19,8 +19,8 @@
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
-    { "src": "screenshots/allena.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Piano di allenamento" },
-    { "src": "screenshots/wod.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "WOD e timer" },
-    { "src": "screenshots/storico.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Storico e calendario" }
+    { "src": "screenshot-allena.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Piano di allenamento" },
+    { "src": "screenshot-wod.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "WOD e timer" },
+    { "src": "screenshot-storico.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Storico e calendario" }
   ]
 }
