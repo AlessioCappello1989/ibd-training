@@ -83,3 +83,22 @@ export async function update(uid, col, id, patch) {
   }
   await F.updateDoc(F.doc(db, "users", uid, col, id), patch);
 }
+
+// Elimina tutti i dati dell'utente e poi l'account (richiesto da Google Play)
+export async function deleteAccount(uid) {
+  const cols = ["entries", "results", "wods", "schede"];
+  if (demo) {
+    cols.forEach((c) => localStorage.removeItem(key(uid, c)));
+    localStorage.removeItem("ibd_demo_user");
+    return;
+  }
+  const u = auth.currentUser;
+  // se l'accesso non è recente Firebase rifiuta: meglio saperlo PRIMA di cancellare i dati
+  const last = Date.parse(u.metadata && u.metadata.lastSignInTime) || 0;
+  if (Date.now() - last > 4 * 60 * 1000) { const e = new Error("login recente richiesto"); e.code = "auth/requires-recent-login"; throw e; }
+  for (const c of cols) {
+    const snap = await F.getDocs(F.collection(db, "users", uid, c));
+    await Promise.all(snap.docs.map((d) => F.deleteDoc(d.ref)));
+  }
+  await A.deleteUser(u);
+}

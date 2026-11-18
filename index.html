@@ -236,6 +236,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
         <button id="btnReset" class="link" type="button">Password dimenticata?</button>
         <button id="btnDemo" class="link hidden" type="button">Prova la modalità demo</button>
       </div>
+      <p class="small" style="text-align:center;margin-top:10px">Accedendo accetti l'<a href="privacy.html" target="_blank" rel="noopener">informativa sulla privacy</a>.</p>
     </div>
   </div>
 </section>
@@ -288,9 +289,11 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <p id="profMode" class="small"></p>
   <button class="btn outline" id="btnExport" type="button" style="font-size:1.2rem">Esporta i miei dati</button>
   <button class="btn primary" id="btnLogout" type="button">Esci</button>
+  <p class="small" style="text-align:center;margin:12px 0"><a href="privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a> · <a href="elimina-account.html" target="_blank" rel="noopener">Eliminazione account</a></p>
+  <button class="btn outline" id="btnDelAcc" type="button" style="font-size:1.1rem;color:var(--red);border-color:var(--red)">Elimina account e dati</button>
   <button class="btn outline" id="profClose" type="button" style="font-size:1.2rem">Chiudi</button>
 </dialog>
 
-<script type="module" src="app.js?v=8"></script>
+<script type="module" src="app.js?v=9"></script>
 </body>
 </html>

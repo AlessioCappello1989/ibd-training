@@ -663,6 +663,24 @@ $("#btnProfile").onclick = () => {
 };
 $("#profClose").onclick = () => $("#profDlg").close();
 $("#btnLogout").onclick = () => S.authApi.out();
+let delArm = 0;
+$("#btnDelAcc").onclick = async (ev) => {
+  const b = ev.currentTarget;
+  if (!delArm) {
+    delArm = setTimeout(() => { delArm = 0; b.textContent = "Elimina account e dati"; }, 4000);
+    b.textContent = "Tocca ancora: cancella tutto per sempre";
+    return;
+  }
+  clearTimeout(delArm); delArm = 0; b.disabled = true; b.textContent = "Elimino…";
+  try {
+    await S.deleteAccount(user.uid);
+    toast("Account e dati eliminati");
+    setTimeout(() => location.reload(), 900);
+  } catch (e) {
+    b.disabled = false; b.textContent = "Elimina account e dati";
+    toast(e.code === "auth/requires-recent-login" ? "Per sicurezza esci, rientra e riprova subito" : "Errore: " + e.message, true);
+  }
+};
 $("#btnExport").onclick = () => {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(D, null, 2)], { type: "application/json" }));
